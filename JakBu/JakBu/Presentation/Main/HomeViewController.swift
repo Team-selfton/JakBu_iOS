@@ -39,6 +39,17 @@ class HomeViewController: UIViewController {
         $0.textColor = .jakbuTextSecondary
     }
 
+    private let testNotificationButton = UIButton(type: .system).then {
+        $0.setTitle("알림 테스트", for: .normal)
+        $0.titleLabel?.font = .systemFont(ofSize: 12, weight: .medium)
+        $0.setTitleColor(.jakbuTextTertiary, for: .normal)
+        $0.backgroundColor = .jakbuCardBackground
+        $0.layer.cornerRadius = 12
+        $0.layer.borderWidth = 1
+        $0.layer.borderColor = UIColor.jakbuCardBorder.cgColor
+        $0.contentEdgeInsets = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+    }
+
     private let todoSectionLabel = UILabel().then {
         $0.text = "할일 추가"
         $0.font = .systemFont(ofSize: 18, weight: .bold)
@@ -137,6 +148,7 @@ class HomeViewController: UIViewController {
 
         contentView.addSubview(titleLabel)
         contentView.addSubview(subtitleLabel)
+        contentView.addSubview(testNotificationButton)
         contentView.addSubview(todoSectionLabel)
         todoInputStackView.addArrangedSubview(todoTextField)
         todoInputStackView.addArrangedSubview(addButton)
@@ -171,8 +183,13 @@ class HomeViewController: UIViewController {
         subtitleLabel.snp.makeConstraints {
             $0.top.equalTo(titleLabel.snp.bottom).offset(4)
             $0.leading.equalToSuperview().offset(20)
-            $0.trailing.equalToSuperview().offset(-20)
         }
+
+//        testNotificationButton.snp.makeConstraints {
+//            $0.centerY.equalTo(subtitleLabel)
+//            $0.trailing.equalToSuperview().offset(-20)
+//            $0.height.equalTo(32)
+//        }
 
         todoSectionLabel.snp.makeConstraints {
             $0.top.equalTo(subtitleLabel.snp.bottom).offset(24)
@@ -223,6 +240,7 @@ class HomeViewController: UIViewController {
     private func setupActions() {
         addButton.addTarget(self, action: #selector(addButtonTapped), for: .touchUpInside)
         todoTextField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
+        testNotificationButton.addTarget(self, action: #selector(testNotificationTapped), for: .touchUpInside)
     }
 
     // MARK: - API
@@ -277,6 +295,19 @@ class HomeViewController: UIViewController {
     @objc private func textFieldDidChange() {
         addButton.isEnabled = !(todoTextField.text?.isEmpty ?? true)
         addButton.alpha = addButton.isEnabled ? 1.0 : 0.5
+    }
+
+    @objc private func testNotificationTapped() {
+        NotificationManager.shared.sendTestNotification()
+
+        // 피드백 제공
+        let alert = UIAlertController(
+            title: "테스트 알림 예약됨",
+            message: "5초 후에 알림이 표시됩니다.\n앱을 백그라운드로 전환하면 알림을 확인할 수 있습니다.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
     }
 
     private func updateUI() {
