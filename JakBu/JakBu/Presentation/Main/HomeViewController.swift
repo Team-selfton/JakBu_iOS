@@ -216,28 +216,31 @@ class HomeViewController: UIViewController {
     }
 
     private func updateUI() {
-        todoListStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        doneListStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-
-        if todoItems.isEmpty {
-            let placeholder = createPlaceholderView(withText: "할일이 없습니다.")
-            todoListStackView.addArrangedSubview(placeholder)
-        } else {
-            for item in todoItems {
-                let itemView = createTodoItemView(item: item)
-                todoListStackView.addArrangedSubview(itemView)
+        UIView.transition(with: todoListStackView, duration: 0.3, options: .transitionCrossDissolve, animations: {
+            self.todoListStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            if self.todoItems.isEmpty {
+                self.addPlaceholder(to: self.todoListStackView, withText: "할일이 없습니다.")
+            } else {
+                self.removePlaceholder(from: self.todoListStackView)
+                for item in self.todoItems {
+                    let itemView = self.createTodoItemView(item: item)
+                    self.todoListStackView.addArrangedSubview(itemView)
+                }
             }
-        }
+        }, completion: nil)
 
-        if doneItems.isEmpty {
-            let placeholder = createPlaceholderView(withText: "완료된 할일이 없습니다.")
-            doneListStackView.addArrangedSubview(placeholder)
-        } else {
-            for item in doneItems {
-                let itemView = createTodoItemView(item: item)
-                doneListStackView.addArrangedSubview(itemView)
+        UIView.transition(with: doneListStackView, duration: 0.3, options: .transitionCrossDissolve, animations: {
+            self.doneListStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            if self.doneItems.isEmpty {
+                self.addPlaceholder(to: self.doneListStackView, withText: "완료된 할일이 없습니다.")
+            } else {
+                self.removePlaceholder(from: self.doneListStackView)
+                for item in self.doneItems {
+                    let itemView = self.createTodoItemView(item: item)
+                    self.doneListStackView.addArrangedSubview(itemView)
+                }
             }
-        }
+        }, completion: nil)
     }
 
     private func createPlaceholderView(withText text: String) -> UIView {
@@ -252,6 +255,7 @@ class HomeViewController: UIViewController {
             $0.backgroundColor = .secondarySystemBackground
             $0.layer.cornerRadius = 12
             $0.clipsToBounds = true
+            $0.tag = -1 // Assign a unique negative tag for placeholders
         }
         
         containerView.addSubview(placeholderLabel)
@@ -283,6 +287,7 @@ class HomeViewController: UIViewController {
             $0.setImage(UIImage(systemName: imageName), for: .normal)
             $0.tintColor = .systemBlue
             $0.isUserInteractionEnabled = false
+            $0.tag = 101 // Unique tag for checkButton
         }
 
         let textLabel = UILabel().then {
@@ -296,6 +301,7 @@ class HomeViewController: UIViewController {
                 $0.attributedText = attributeString
                 $0.textColor = .systemGray
             }
+            $0.tag = 102 // Unique tag for textLabel
         }
 
         containerView.addSubview(checkButton)
@@ -339,45 +345,18 @@ class HomeViewController: UIViewController {
             } receiveValue: { [weak self] updatedTodo in
                 guard let self = self else { return }
                 
-                // Find and move the item
+                // Update the data source
                 if let index = self.todoItems.firstIndex(where: { $0.id == tappedId }) {
-                    let item = self.todoItems.remove(at: index)
+                    self.todoItems.remove(at: index)
                     self.doneItems.append(updatedTodo)
-                    self.animateItemMove(item: item, itemView: view, from: self.todoListStackView, to: self.doneListStackView)
                 } else if let index = self.doneItems.firstIndex(where: { $0.id == tappedId }) {
-                    let item = self.doneItems.remove(at: index)
+                    self.doneItems.remove(at: index)
                     self.todoItems.append(updatedTodo)
-                    self.animateItemMove(item: item, itemView: view, from: self.doneListStackView, to: self.todoListStackView)
                 }
+                // Re-render UI after data source update
+                self.updateUI()
             }
             .store(in: &cancellables)
-    }
-
-    private func animateItemMove(item: Todo, itemView: UIView, from sourceStack: UIStackView, to destinationStack: UIStackView) {
-        // 1. Handle placeholder for the source stack (if it will become empty)
-        if sourceStack.arrangedSubviews.count == 1 {
-            let placeholderText = (sourceStack == todoListStackView) ? "할일이 없습니다." : "완료된 할일이 없습니다."
-            addPlaceholder(to: sourceStack, withText: placeholderText)
-        }
-
-        // 2. Handle placeholder for the destination stack (if it is currently empty)
-        if destinationStack.arrangedSubviews.count == 1 && destinationStack.arrangedSubviews.first(where: { $0.tag == -1 }) != nil {
-            removePlaceholder(from: destinationStack)
-        }
-
-        // 3. Perform the animation
-        UIView.animate(withDuration: 0.6, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: .curveEaseInOut, animations: {
-            // By hiding and removing, we let the stack view animate the layout change
-            itemView.isHidden = true
-            sourceStack.removeArrangedSubview(itemView)
-            
-            // Re-add to the new stack and unhide
-            destinationStack.addArrangedSubview(itemView)
-            itemView.isHidden = false
-            
-            // Update the visual state of the cell
-            self.updateItemView(itemView, isDone: destinationStack == self.doneListStackView)
-        })
     }
 
     private func updateItemView(_ view: UIView, isDone: Bool) {
@@ -389,33 +368,37 @@ class HomeViewController: UIViewController {
         let imageName = isDone ? "checkmark.circle.fill" : "circle"
         checkButton.setImage(UIImage(systemName: imageName), for: .normal)
         
-        guard let title = textLabel.text else { return }
-
+        // Ensure textLabel.text is not nil before attempting to get its string value
+        let originalText = (textLabel.attributedText?.string ?? textLabel.text) ?? ""
+        
         if isDone {
-            let attributeString = NSMutableAttributedString(string: title)
+            let attributeString = NSMutableAttributedString(string: originalText)
             attributeString.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSMakeRange(0, attributeString.length))
             textLabel.attributedText = attributeString
             textLabel.textColor = .systemGray
         } else {
             textLabel.attributedText = nil
-            textLabel.text = title
+            textLabel.text = originalText
             textLabel.textColor = .label
         }
     }
     
     private func addPlaceholder(to stackView: UIStackView, withText text: String) {
-        let placeholder = createPlaceholderView(withText: text)
-        placeholder.isHidden = true
-        stackView.addArrangedSubview(placeholder)
-        UIView.animate(withDuration: 0.3) {
-            placeholder.isHidden = false
+        // Only add if there isn't one already
+        if stackView.arrangedSubviews.first(where: { $0.tag == -1 }) == nil {
+            let placeholder = createPlaceholderView(withText: text)
+            placeholder.alpha = 0 // Start invisible for animation
+            stackView.addArrangedSubview(placeholder)
+            UIView.animate(withDuration: 0.3) {
+                placeholder.alpha = 1
+            }
         }
     }
 
     private func removePlaceholder(from stackView: UIStackView) {
         if let placeholder = stackView.arrangedSubviews.first(where: { $0.tag == -1 }) {
             UIView.animate(withDuration: 0.3, animations: {
-                placeholder.isHidden = true
+                placeholder.alpha = 0
             }) { _ in
                 stackView.removeArrangedSubview(placeholder)
                 placeholder.removeFromSuperview()
