@@ -189,6 +189,7 @@ struct WidgetHeaderView: View {
             }
             Spacer()
         }
+        .padding(.top, 20)
     }
 }
 
