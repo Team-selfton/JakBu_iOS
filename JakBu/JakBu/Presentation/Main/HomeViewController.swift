@@ -327,7 +327,8 @@ class HomeViewController: UIViewController {
 
         APIService.shared.toggleTodoStatus(id: tappedId)
             .receive(on: DispatchQueue.main)
-            .sink { completion in
+            .sink { [weak self] completion in
+                guard let self = self else { return }
                 if case .failure(let error) = completion {
                     if let apiError = error as? APIError, apiError == .sessionExpired {
                         self.handleSessionExpired()
@@ -335,10 +336,91 @@ class HomeViewController: UIViewController {
                         self.showAlert(message: "상태 변경에 실패했습니다: \(error.localizedDescription)")
                     }
                 }
-            } receiveValue: { _ in
-                self.fetchTodayTodos()
+            } receiveValue: { [weak self] updatedTodo in
+                guard let self = self else { return }
+                
+                // Find and move the item
+                if let index = self.todoItems.firstIndex(where: { $0.id == tappedId }) {
+                    let item = self.todoItems.remove(at: index)
+                    self.doneItems.append(updatedTodo)
+                    self.animateItemMove(item: item, itemView: view, from: self.todoListStackView, to: self.doneListStackView)
+                } else if let index = self.doneItems.firstIndex(where: { $0.id == tappedId }) {
+                    let item = self.doneItems.remove(at: index)
+                    self.todoItems.append(updatedTodo)
+                    self.animateItemMove(item: item, itemView: view, from: self.doneListStackView, to: self.todoListStackView)
+                }
             }
             .store(in: &cancellables)
+    }
+
+    private func animateItemMove(item: Todo, itemView: UIView, from sourceStack: UIStackView, to destinationStack: UIStackView) {
+        // 1. Handle placeholder for the source stack (if it will become empty)
+        if sourceStack.arrangedSubviews.count == 1 {
+            let placeholderText = (sourceStack == todoListStackView) ? "할일이 없습니다." : "완료된 할일이 없습니다."
+            addPlaceholder(to: sourceStack, withText: placeholderText)
+        }
+
+        // 2. Handle placeholder for the destination stack (if it is currently empty)
+        if destinationStack.arrangedSubviews.count == 1 && destinationStack.arrangedSubviews.first(where: { $0.tag == -1 }) != nil {
+            removePlaceholder(from: destinationStack)
+        }
+
+        // 3. Perform the animation
+        UIView.animate(withDuration: 0.6, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: .curveEaseInOut, animations: {
+            // By hiding and removing, we let the stack view animate the layout change
+            itemView.isHidden = true
+            sourceStack.removeArrangedSubview(itemView)
+            
+            // Re-add to the new stack and unhide
+            destinationStack.addArrangedSubview(itemView)
+            itemView.isHidden = false
+            
+            // Update the visual state of the cell
+            self.updateItemView(itemView, isDone: destinationStack == self.doneListStackView)
+        })
+    }
+
+    private func updateItemView(_ view: UIView, isDone: Bool) {
+        guard let checkButton = view.viewWithTag(101) as? UIButton,
+              let textLabel = view.viewWithTag(102) as? UILabel else {
+            return
+        }
+
+        let imageName = isDone ? "checkmark.circle.fill" : "circle"
+        checkButton.setImage(UIImage(systemName: imageName), for: .normal)
+        
+        guard let title = textLabel.text else { return }
+
+        if isDone {
+            let attributeString = NSMutableAttributedString(string: title)
+            attributeString.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSMakeRange(0, attributeString.length))
+            textLabel.attributedText = attributeString
+            textLabel.textColor = .systemGray
+        } else {
+            textLabel.attributedText = nil
+            textLabel.text = title
+            textLabel.textColor = .label
+        }
+    }
+    
+    private func addPlaceholder(to stackView: UIStackView, withText text: String) {
+        let placeholder = createPlaceholderView(withText: text)
+        placeholder.isHidden = true
+        stackView.addArrangedSubview(placeholder)
+        UIView.animate(withDuration: 0.3) {
+            placeholder.isHidden = false
+        }
+    }
+
+    private func removePlaceholder(from stackView: UIStackView) {
+        if let placeholder = stackView.arrangedSubviews.first(where: { $0.tag == -1 }) {
+            UIView.animate(withDuration: 0.3, animations: {
+                placeholder.isHidden = true
+            }) { _ in
+                stackView.removeArrangedSubview(placeholder)
+                placeholder.removeFromSuperview()
+            }
+        }
     }
     
     private func showAlert(message: String, completion: (() -> Void)? = nil) {
