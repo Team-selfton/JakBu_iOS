@@ -1,8 +1,13 @@
 import UIKit
 import SnapKit
 import Then
+import Combine
 
 class AuthViewController: UIViewController {
+
+    // MARK: - Properties
+
+    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - UI Components
 
@@ -23,10 +28,9 @@ class AuthViewController: UIViewController {
         $0.selectedSegmentIndex = 0
     }
 
-    private let emailTextField = UITextField().then {
-        $0.placeholder = "이메일"
+    private let accountIdTextField = UITextField().then {
+        $0.placeholder = "계정 ID"
         $0.borderStyle = .roundedRect
-        $0.keyboardType = .emailAddress
         $0.autocapitalizationType = .none
         $0.font = .systemFont(ofSize: 16)
     }
@@ -86,7 +90,7 @@ class AuthViewController: UIViewController {
         scrollView.addSubview(contentView)
         contentView.addSubview(titleLabel)
         contentView.addSubview(segmentedControl)
-        contentView.addSubview(emailTextField)
+        contentView.addSubview(accountIdTextField)
         contentView.addSubview(passwordTextField)
         contentView.addSubview(passwordConfirmTextField)
         contentView.addSubview(nameTextField)
@@ -117,7 +121,7 @@ class AuthViewController: UIViewController {
             $0.height.equalTo(36)
         }
 
-        emailTextField.snp.makeConstraints {
+        accountIdTextField.snp.makeConstraints {
             $0.top.equalTo(segmentedControl.snp.bottom).offset(32)
             $0.leading.equalToSuperview().offset(24)
             $0.trailing.equalToSuperview().offset(-24)
@@ -125,7 +129,7 @@ class AuthViewController: UIViewController {
         }
 
         passwordTextField.snp.makeConstraints {
-            $0.top.equalTo(emailTextField.snp.bottom).offset(16)
+            $0.top.equalTo(accountIdTextField.snp.bottom).offset(16)
             $0.leading.equalToSuperview().offset(24)
             $0.trailing.equalToSuperview().offset(-24)
             $0.height.equalTo(50)
@@ -184,9 +188,76 @@ class AuthViewController: UIViewController {
     }
 
     @objc private func actionButtonTapped() {
+        if segmentedControl.selectedSegmentIndex == 0 {
+            login()
+        } else {
+            signup()
+        }
+    }
+    
+    private func login() {
+        guard let accountId = accountIdTextField.text, !accountId.isEmpty,
+              let password = passwordTextField.text, !password.isEmpty else {
+            showAlert(message: "계정 ID와 비밀번호를 입력해주세요.")
+            return
+        }
+
+        let request = LoginRequest(accountId: accountId, password: password)
+        APIService.shared.login(request: request)
+            .receive(on: DispatchQueue.main)
+            .sink { completion in
+                if case .failure(let error) = completion {
+                    self.showAlert(message: "로그인 실패: \(error.localizedDescription)")
+                }
+            } receiveValue: { response in
+                AuthManager.shared.saveTokens(from: response)
+                self.presentMainVC()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func signup() {
+        guard let accountId = accountIdTextField.text, !accountId.isEmpty,
+              let password = passwordTextField.text, !password.isEmpty,
+              let passwordConfirm = passwordConfirmTextField.text, !passwordConfirm.isEmpty,
+              let name = nameTextField.text, !name.isEmpty else {
+            showAlert(message: "모든 필드를 입력해주세요.")
+            return
+        }
+
+        guard password == passwordConfirm else {
+            showAlert(message: "비밀번호가 일치하지 않습니다.")
+            return
+        }
+
+        let request = SignupRequest(accountId: accountId, password: password, name: name)
+        APIService.shared.signup(request: request)
+            .receive(on: DispatchQueue.main)
+            .sink { completion in
+                if case .failure(let error) = completion {
+                    self.showAlert(message: "회원가입 실패: \(error.localizedDescription)")
+                }
+            } receiveValue: { response in
+                AuthManager.shared.saveTokens(from: response)
+                self.showAlert(message: "회원가입 성공!") {
+                    self.presentMainVC()
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private func presentMainVC() {
         let mainVC = MainTabBarController()
         mainVC.modalPresentationStyle = .fullScreen
         present(mainVC, animated: true)
+    }
+    
+    private func showAlert(message: String, completion: (() -> Void)? = nil) {
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default) { _ in
+            completion?()
+        })
+        present(alert, animated: true)
     }
 
     @objc private func dismissKeyboard() {

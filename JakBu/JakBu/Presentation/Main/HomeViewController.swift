@@ -1,14 +1,21 @@
 import UIKit
 import SnapKit
 import Then
-
-struct TodoItem {
-    let id: UUID
-    var text: String
-    var isDone: Bool
-}
+import Combine
 
 class HomeViewController: UIViewController {
+
+    // MARK: - Properties
+    
+    private var cancellables = Set<AnyCancellable>()
+    private var todoItems: [Todo] = []
+    private var doneItems: [Todo] = []
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 
     // MARK: - UI Components
 
@@ -65,9 +72,6 @@ class HomeViewController: UIViewController {
         $0.distribution = .fill
     }
 
-    private var todoItems: [TodoItem] = []
-    private var doneItems: [TodoItem] = []
-
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
@@ -77,11 +81,10 @@ class HomeViewController: UIViewController {
         setupNavigationBar()
         setupActions()
 
-        // 초기 상태: 버튼 비활성화
         addButton.isEnabled = false
         addButton.alpha = 0.5
         
-        updateUI()
+        fetchTodayTodos()
     }
 
     // MARK: - Setup
@@ -158,20 +161,45 @@ class HomeViewController: UIViewController {
         todoTextField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
     }
 
+    // MARK: - API
+
+    private func fetchTodayTodos() {
+        APIService.shared.getTodayTodos()
+            .receive(on: DispatchQueue.main)
+            .sink { completion in
+                if case .failure(let error) = completion {
+                    self.showAlert(message: "할일 목록을 불러오는데 실패했습니다: \(error.localizedDescription)")
+                }
+            } receiveValue: { todos in
+                self.todoItems = todos.filter { $0.status == .TODO }
+                self.doneItems = todos.filter { $0.status == .DONE }
+                self.updateUI()
+            }
+            .store(in: &cancellables)
+    }
+    
     // MARK: - Actions
 
     @objc private func addButtonTapped() {
         guard let text = todoTextField.text, !text.isEmpty else {
             return
         }
+        
+        let today = dateFormatter.string(from: Date())
+        let request = CreateTodoRequest(title: text, date: today)
 
-        let newItem = TodoItem(id: UUID(), text: text, isDone: false)
-        todoItems.append(newItem)
-
-        updateUI()
-
-        todoTextField.text = ""
-        todoTextField.resignFirstResponder()
+        APIService.shared.createTodo(request: request)
+            .receive(on: DispatchQueue.main)
+            .sink { completion in
+                if case .failure(let error) = completion {
+                    self.showAlert(message: "할일 추가에 실패했습니다: \(error.localizedDescription)")
+                }
+            } receiveValue: { _ in
+                self.todoTextField.text = ""
+                self.todoTextField.resignFirstResponder()
+                self.fetchTodayTodos()
+            }
+            .store(in: &cancellables)
     }
 
     @objc private func textFieldDidChange() {
@@ -180,11 +208,9 @@ class HomeViewController: UIViewController {
     }
 
     private func updateUI() {
-        // 스택 뷰의 모든 서브뷰를 제거
         todoListStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         doneListStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
-        // todoItems에 대한 뷰를 생성하고 스택 뷰에 추가
         if todoItems.isEmpty {
             let placeholder = createPlaceholderView(withText: "할일이 없습니다.")
             todoListStackView.addArrangedSubview(placeholder)
@@ -195,7 +221,6 @@ class HomeViewController: UIViewController {
             }
         }
 
-        // doneItems에 대한 뷰를 생성하고 스택 뷰에 추가
         if doneItems.isEmpty {
             let placeholder = createPlaceholderView(withText: "완료된 할일이 없습니다.")
             doneListStackView.addArrangedSubview(placeholder)
@@ -233,8 +258,7 @@ class HomeViewController: UIViewController {
         return containerView
     }
 
-
-    private func createTodoItemView(item: TodoItem) -> UIView {
+    private func createTodoItemView(item: Todo) -> UIView {
         let containerView = UIView().then {
             $0.backgroundColor = .secondarySystemBackground
             $0.layer.cornerRadius = 12
@@ -242,24 +266,24 @@ class HomeViewController: UIViewController {
             let tapGesture = UITapGestureRecognizer(target: self, action: #selector(todoItemTapped(_:)))
             $0.addGestureRecognizer(tapGesture)
             $0.isUserInteractionEnabled = true
-            $0.tag = item.id.hashValue // id를 태그로 사용하여 어떤 아이템이 탭되었는지 식별
+            $0.tag = item.id
         }
 
         let checkButton = UIButton(type: .system).then {
-            let imageName = item.isDone ? "checkmark.circle.fill" : "circle"
+            let isDone = item.status == .DONE
+            let imageName = isDone ? "checkmark.circle.fill" : "circle"
             $0.setImage(UIImage(systemName: imageName), for: .normal)
             $0.tintColor = .systemBlue
-            $0.isUserInteractionEnabled = false // 버튼의 탭 액션 대신 컨테이너 뷰의 탭 제스처를 사용
+            $0.isUserInteractionEnabled = false
         }
 
         let textLabel = UILabel().then {
-            $0.text = item.text
+            $0.text = item.title
             $0.font = .systemFont(ofSize: 16, weight: .medium)
             $0.textColor = .label
             $0.numberOfLines = 0
-            if item.isDone {
-                // 취소선 추가
-                let attributeString = NSMutableAttributedString(string: item.text)
+            if item.status == .DONE {
+                let attributeString = NSMutableAttributedString(string: item.title)
                 attributeString.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSMakeRange(0, attributeString.length))
                 $0.attributedText = attributeString
                 $0.textColor = .systemGray
@@ -291,18 +315,26 @@ class HomeViewController: UIViewController {
 
     @objc private func todoItemTapped(_ sender: UITapGestureRecognizer) {
         guard let view = sender.view else { return }
-        let tappedIdHash = view.tag
+        let tappedId = view.tag
 
-        if let index = todoItems.firstIndex(where: { $0.id.hashValue == tappedIdHash }) {
-            var item = todoItems.remove(at: index)
-            item.isDone = true
-            doneItems.append(item)
-        } else if let index = doneItems.firstIndex(where: { $0.id.hashValue == tappedIdHash }) {
-            var item = doneItems.remove(at: index)
-            item.isDone = false
-            todoItems.append(item)
-        }
-
-        updateUI()
+        APIService.shared.toggleTodoStatus(id: tappedId)
+            .receive(on: DispatchQueue.main)
+            .sink { completion in
+                if case .failure(let error) = completion {
+                    self.showAlert(message: "상태 변경에 실패했습니다: \(error.localizedDescription)")
+                }
+            } receiveValue: { _ in
+                self.fetchTodayTodos()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func showAlert(message: String, completion: (() -> Void)? = nil) {
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default) { _ in
+            completion?()
+        })
+        present(alert, animated: true)
     }
 }
+
