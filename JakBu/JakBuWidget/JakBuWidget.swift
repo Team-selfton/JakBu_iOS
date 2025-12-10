@@ -88,301 +88,597 @@ struct JakBuWidgetEntryView : View {
 }
 
 struct SmallWidgetView: View {
+
     var entry: TodoWidgetEntry
 
+
+
     var body: some View {
+
         ZStack {
+
             // 다크 그라데이션 배경
+
             LinearGradient(
+
                 colors: [
+
                     Color(red: 0x1e/255, green: 0x2a/255, blue: 0x3f/255),
+
                     Color(red: 0x1a/255, green: 0x23/255, blue: 0x32/255),
+
                     Color(red: 0x0f/255, green: 0x15/255, blue: 0x20/255)
+
                 ],
+
                 startPoint: .top,
+
                 endPoint: .bottom
+
             )
+
             .ignoresSafeArea()
 
+
+
             VStack(alignment: .leading, spacing: 12) {
+
                 WidgetHeaderView()
 
+
+
                 Spacer()
+
+
 
                 ProgressCircleView(
+
                     total: entry.todoItems.count + entry.doneItems.count,
+
                     completed: entry.doneItems.count
+
                 )
 
+
+
                 Spacer()
+
+
 
                 VStack(alignment: .leading, spacing: 4) {
+
                     Text("남은 할일")
+
                         .font(.caption2)
+
                         .foregroundColor(.white.opacity(0.6))
+
                     Text("\(entry.todoItems.count)개")
+
                         .font(.title2)
+
                         .bold()
+
                         .foregroundColor(.white)
+
                 }
+
             }
+
             .padding()
+
         }
+
     }
+
 }
+
+
 
 struct MediumWidgetView: View {
+
     var entry: TodoWidgetEntry
 
+
+
     var body: some View {
+
         ZStack {
+
             // 다크 그라데이션 배경
+
             LinearGradient(
+
                 colors: [
+
                     Color(red: 0x1e/255, green: 0x2a/255, blue: 0x3f/255),
+
                     Color(red: 0x1a/255, green: 0x23/255, blue: 0x32/255),
+
                     Color(red: 0x0f/255, green: 0x15/255, blue: 0x20/255)
+
                 ],
+
                 startPoint: .top,
+
                 endPoint: .bottom
+
             )
+
             .ignoresSafeArea()
 
+
+
             VStack(alignment: .leading, spacing: 12) {
+
                 WidgetHeaderView()
 
+
+
                 HStack(alignment: .top, spacing: 12) {
+
                     // 할일 섹션
+
                     VStack(alignment: .leading, spacing: 8) {
+
                         HStack {
+
                             Image(systemName: "circle")
+
                                 .font(.caption2)
+
                                 .foregroundColor(Color(red: 0x5b/255, green: 0x8d/255, blue: 0xd5/255))
+
                             Text("할일")
+
                                 .font(.caption)
+
                                 .bold()
+
                                 .foregroundColor(.white.opacity(0.8))
+
                         }
+
+
 
                         if entry.todoItems.isEmpty {
+
                             Text("없음")
+
                                 .font(.caption2)
+
                                 .foregroundColor(.white.opacity(0.4))
+
                                 .padding(.leading, 4)
+
                         } else {
+
                             ForEach(entry.todoItems.prefix(3)) { todo in
+
                                 TodoRow(todo: todo)
+
                             }
+
                         }
 
+
+
                         Spacer()
+
                     }
+
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+
 
                     Divider()
+
                         .frame(height: 60)
+
                         .overlay(Color.white.opacity(0.1))
 
+
+
                     // 완료 섹션
+
                     VStack(alignment: .leading, spacing: 8) {
+
                         HStack {
+
                             Image(systemName: "checkmark.circle.fill")
+
                                 .font(.caption2)
+
                                 .foregroundColor(.green)
+
                             Text("완료")
+
                                 .font(.caption)
+
                                 .bold()
+
                                 .foregroundColor(.white.opacity(0.8))
+
                         }
+
+
 
                         if entry.doneItems.isEmpty {
+
                             Text("없음")
+
                                 .font(.caption2)
+
                                 .foregroundColor(.white.opacity(0.4))
+
                                 .padding(.leading, 4)
+
                         } else {
+
                             ForEach(entry.doneItems.prefix(3)) { todo in
+
                                 TodoRow(todo: todo)
+
                             }
+
                         }
 
+
+
                         Spacer()
+
                     }
+
                     .frame(maxWidth: .infinity, alignment: .leading)
+
                 }
 
+
+
                 Spacer()
+
             }
+
             .padding()
+
         }
+
     }
+
 }
+
+
+
 
 
 struct WidgetHeaderView: View {
+
     var body: some View {
+
         HStack(alignment: .center) {
+
             VStack(alignment: .leading, spacing: 2) {
+
                 Text("JakBu")
+
                     .font(.system(size: 20, weight: .bold))
+
                     .foregroundColor(Color(red: 0x6b/255, green: 0x9b/255, blue: 0xd8/255))
+
                 Text("작심삼일 부수기")
+
                     .font(.system(size: 9))
+
                     .foregroundColor(.white.opacity(0.6))
+
             }
+
             Spacer()
+
         }
+
     }
+
 }
+
+
 
 struct TodoRow: View {
+
     let todo: Todo
 
+
+
     var body: some View {
+
         HStack(spacing: 6) {
+
             Image(systemName: todo.status == .DONE ? "checkmark.circle.fill" : "circle")
+
                 .foregroundColor(todo.status == .DONE ? .green : Color(red: 0x5b/255, green: 0x8d/255, blue: 0xd5/255))
+
                 .font(.caption2)
+
+
 
             Text(todo.title)
+
                 .font(.caption2)
+
                 .lineLimit(1)
+
                 .strikethrough(todo.status == .DONE, color: .white.opacity(0.4))
+
                 .foregroundColor(todo.status == .DONE ? .white.opacity(0.5) : .white.opacity(0.9))
+
         }
+
         .padding(.horizontal, 4)
+
     }
+
 }
+
+
 
 struct ProgressCircleView: View {
+
     let total: Int
+
     let completed: Int
 
+
+
     private var progress: Double {
+
         total > 0 ? Double(completed) / Double(total) : 0
+
     }
+
+
 
     private var progressColor: Color {
+
         if progress >= 1.0 {
+
             return .green
+
         } else if progress >= 0.5 {
+
             return Color(red: 0x5b/255, green: 0x8d/255, blue: 0xd5/255)
+
         } else {
+
             return Color(red: 0x6b/255, green: 0x9b/255, blue: 0xd8/255)
+
         }
+
     }
+
+
 
     var body: some View {
+
         ZStack {
+
             Circle()
+
                 .stroke(lineWidth: 10)
+
                 .opacity(0.2)
+
                 .foregroundColor(.white)
 
+
+
             Circle()
+
                 .trim(from: 0.0, to: CGFloat(min(self.progress, 1.0)))
+
                 .stroke(style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
+
                 .foregroundColor(progressColor)
+
                 .rotationEffect(Angle(degrees: 270.0))
+
                 .animation(.easeInOut, value: progress)
 
+
+
             VStack(spacing: 2) {
+
                 Text("\(completed)/\(total)")
+
                     .font(.title2)
+
                     .bold()
+
                     .foregroundColor(.white)
+
                 Text("완료")
+
                     .font(.caption2)
+
                     .foregroundColor(.white.opacity(0.6))
+
             }
+
         }
+
         .frame(width: 80, height: 80)
+
     }
+
 }
+
+
+
 
 
 struct EmptyStateView: View {
+
     var body: some View {
+
         ZStack {
+
             // 다크 그라데이션 배경
+
             LinearGradient(
+
                 colors: [
+
                     Color(red: 0x1e/255, green: 0x2a/255, blue: 0x3f/255),
+
                     Color(red: 0x1a/255, green: 0x23/255, blue: 0x32/255),
+
                     Color(red: 0x0f/255, green: 0x15/255, blue: 0x20/255)
+
                 ],
+
                 startPoint: .top,
+
                 endPoint: .bottom
+
             )
+
             .ignoresSafeArea()
 
+
+
             VStack(spacing: 16) {
+
                 WidgetHeaderView()
+
                     .padding(.horizontal)
 
+
+
                 Spacer()
+
+
 
                 VStack(spacing: 12) {
+
                     Image(systemName: "checkmark.circle.fill")
+
                         .font(.system(size: 40))
+
                         .foregroundColor(.green)
 
+
+
                     Text("모든 할일 완료!")
+
                         .font(.headline)
+
                         .fontWeight(.bold)
+
                         .foregroundColor(.white)
 
+
+
                     Text("새로운 할일을 추가해보세요")
+
                         .font(.caption)
+
                         .foregroundColor(.white.opacity(0.6))
+
                 }
 
+
+
                 Spacer()
+
             }
+
             .padding()
+
         }
+
     }
+
 }
+
+
+
 
 
 struct JakBuWidget: Widget {
+
     let kind: String = "JakBuWidget"
 
+
+
     var body: some WidgetConfiguration {
+
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
+
             JakBuWidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+
         }
+
         .configurationDisplayName("작부 위젯")
+
         .description("오늘의 할일을 위젯에서 확인하세요.")
+
         .supportedFamilies([.systemSmall, .systemMedium])
+
     }
+
 }
+
+
 
 #Preview(as: .systemMedium) {
+
     JakBuWidget()
+
 } timeline: {
+
     TodoWidgetEntry(date: .now, todoItems: [
+
         Todo(id: 1, title: "운동하기", date: "2025-12-10", status: .TODO),
+
         Todo(id: 2, title: "책읽기", date: "2025-12-10", status: .TODO)
+
     ], doneItems: [
+
         Todo(id: 3, title: "코딩 공부", date: "2025-12-10", status: .DONE)
+
     ])
+
 }
 
-#Preview(as: .systemSmall) {
-    JakBuWidget()
-} timeline: {
-    TodoWidgetEntry(date: .now, todoItems: [
-        Todo(id: 1, title: "운동하기", date: "2025-12-10", status: .TODO),
-        Todo(id: 2, title: "책읽기", date: "2025-12-10", status: .TODO)
-    ], doneItems: [
-        Todo(id: 3, title: "코딩 공부", date: "2025-12-10", status: .DONE)
-    ])
-}
+
 
 #Preview(as: .systemSmall) {
+
     JakBuWidget()
+
 } timeline: {
+
+    TodoWidgetEntry(date: .now, todoItems: [
+
+        Todo(id: 1, title: "운동하기", date: "2025-12-10", status: .TODO),
+
+        Todo(id: 2, title: "책읽기", date: "2025-12-10", status: .TODO)
+
+    ], doneItems: [
+
+        Todo(id: 3, title: "코딩 공부", date: "2025-12-10", status: .DONE)
+
+    ])
+
+}
+
+
+
+#Preview(as: .systemSmall) {
+
+    JakBuWidget()
+
+} timeline: {
+
     TodoWidgetEntry(date: .now, todoItems: [], doneItems: [])
+
 }

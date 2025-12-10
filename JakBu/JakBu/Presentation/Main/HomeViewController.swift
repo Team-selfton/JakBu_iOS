@@ -19,6 +19,12 @@ class HomeViewController: UIViewController {
 
     private var gradientLayer: CAGradientLayer?
 
+    private let logoutButton = UIButton(type: .system).then {
+        $0.setImage(UIImage(systemName: "rectangle.portrait.and.arrow.right"), for: .normal)
+        $0.tintColor = .jakbuTextSecondary
+    }
+
+
     // MARK: - UI Components
 
     private let scrollView = UIScrollView().then {
@@ -148,6 +154,7 @@ class HomeViewController: UIViewController {
 
         contentView.addSubview(titleLabel)
         contentView.addSubview(subtitleLabel)
+        contentView.addSubview(logoutButton)
         contentView.addSubview(testNotificationButton)
         contentView.addSubview(todoSectionLabel)
         todoInputStackView.addArrangedSubview(todoTextField)
@@ -183,6 +190,12 @@ class HomeViewController: UIViewController {
         subtitleLabel.snp.makeConstraints {
             $0.top.equalTo(titleLabel.snp.bottom).offset(4)
             $0.leading.equalToSuperview().offset(20)
+        }
+
+        logoutButton.snp.makeConstraints {
+            $0.centerY.equalTo(titleLabel.snp.centerY)
+            $0.trailing.equalToSuperview().offset(-20)
+            $0.width.height.equalTo(30)
         }
 
 //        testNotificationButton.snp.makeConstraints {
@@ -241,9 +254,36 @@ class HomeViewController: UIViewController {
         addButton.addTarget(self, action: #selector(addButtonTapped), for: .touchUpInside)
         todoTextField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
         testNotificationButton.addTarget(self, action: #selector(testNotificationTapped), for: .touchUpInside)
+        logoutButton.addTarget(self, action: #selector(logoutButtonTapped), for: .touchUpInside)
     }
 
-    // MARK: - API
+    // MARK: - Actions
+    
+    @objc private func logoutButtonTapped() {
+        let alert = UIAlertController(title: "로그아웃", message: "정말 로그아웃 하시겠습니까?", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel, handler: nil))
+        alert.addAction(UIAlertAction(title: "로그아웃", style: .destructive, handler: { _ in
+            self.performLogout()
+        }))
+        present(alert, animated: true)
+    }
+    
+    private func performLogout() {
+        // Clear tokens
+        AuthManager.shared.clearTokens()
+
+        // 위젯 데이터 초기화
+        SharedDataManager.shared.saveTodos([])
+
+        // Navigate to Onboarding
+        guard let window = view.window else { return }
+        let onboardingVC = OnboardingViewController()
+        
+        UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
+            window.rootViewController = onboardingVC
+        })
+        window.makeKeyAndVisible()
+    }
 
     private func fetchTodayTodos() {
         APIService.shared.getTodayTodos()
@@ -526,12 +566,7 @@ class HomeViewController: UIViewController {
     
     private func handleSessionExpired() {
         showAlert(message: "세션이 만료되었습니다. 다시 로그인해주세요.") {
-            AuthManager.shared.clearTokens()
-            
-            guard let window = self.view.window else { return }
-            let authVC = AuthViewController()
-            window.rootViewController = authVC
-            window.makeKeyAndVisible()
+            self.performLogout()
         }
     }
 }
