@@ -1,24 +1,82 @@
 import Foundation
 import Combine
 
-enum APIError: Error {
+enum APIError: Error, Equatable {
     case invalidURL
     case requestFailed(Error)
     case invalidResponse
     case decodingFailed(Error)
+    case unauthorized
+    case sessionExpired
     case serverError(message: String)
+
+    static func == (lhs: APIError, rhs: APIError) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidURL, .invalidURL):
+            return true
+        case (.invalidResponse, .invalidResponse):
+            return true
+        case (.unauthorized, .unauthorized):
+            return true
+        case (.sessionExpired, .sessionExpired):
+            return true
+        case (.serverError(let lMsg), .serverError(let rMsg)):
+            return lMsg == rMsg
+        case (.requestFailed, .requestFailed):
+            return true
+        case (.decodingFailed, .decodingFailed):
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 class APIService {
     static let shared = APIService()
     private let baseURL = URL(string: "https://jakbu-api.dsmhs.kr")!
     private var cancellables = Set<AnyCancellable>()
+    private var isRefreshing = false
+    private var requestsToRetry: [() -> AnyPublisher<Any, APIError>] = []
 
     private func request<T: Decodable>(endpoint: String, method: String, body: (any Encodable)? = nil, needsAuth: Bool = false) -> AnyPublisher<T, APIError> {
-        guard let url = URL(string: endpoint, relativeTo: baseURL) else {
-            return Fail(error: APIError.invalidURL).eraseToAnyPublisher()
-        }
+        let urlRequest = self.createRequest(endpoint: endpoint, method: method, body: body, needsAuth: needsAuth)
 
+        return URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .handleEvents(receiveOutput: { output in
+                NetworkLogger.shared.log(response: output.response, data: output.data)
+            })
+            .tryMap { data, response in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+                if httpResponse.statusCode == 401 {
+                    throw APIError.unauthorized
+                }
+                guard 200..<300 ~= httpResponse.statusCode else {
+                    throw APIError.invalidResponse
+                }
+                return data
+            }
+            .decode(type: T.self, decoder: JSONDecoder())
+            .mapError { error -> APIError in
+                if let apiError = error as? APIError {
+                    return apiError
+                }
+                return APIError.decodingFailed(error)
+            }
+            .catch { error -> AnyPublisher<T, APIError> in
+                if error == .unauthorized {
+                    return self.refreshTokenAndRetry(request: { self.request(endpoint: endpoint, method: method, body: body, needsAuth: needsAuth) })
+                } else {
+                    return Fail(error: error).eraseToAnyPublisher()
+                }
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    private func createRequest(endpoint: String, method: String, body: (any Encodable)? = nil, needsAuth: Bool = false) -> URLRequest {
+        let url = URL(string: endpoint, relativeTo: baseURL)!
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -30,32 +88,29 @@ class APIService {
         }
 
         if let body = body {
-            do {
-                request.httpBody = try JSONEncoder().encode(body)
-            } catch {
-                return Fail(error: APIError.decodingFailed(error)).eraseToAnyPublisher()
-            }
+            request.httpBody = try? JSONEncoder().encode(body)
+        }
+        
+        NetworkLogger.shared.log(request: request)
+        return request
+    }
+
+    private func refreshTokenAndRetry<T>(request: @escaping () -> AnyPublisher<T, APIError>) -> AnyPublisher<T, APIError> {
+        guard let refreshToken = AuthManager.shared.refreshToken else {
+            return Fail(error: APIError.sessionExpired).eraseToAnyPublisher()
         }
 
-        NetworkLogger.shared.log(request: request)
+        let tokenRequest = RefreshTokenRequest(refreshToken: refreshToken)
+        let requestPublisher: AnyPublisher<AuthResponse, APIError> = self.request(endpoint: "/auth/refresh-token", method: "POST", body: tokenRequest)
 
-        return URLSession.shared.dataTaskPublisher(for: request)
-            .handleEvents(receiveOutput: { output in
-                NetworkLogger.shared.log(response: output.response, data: output.data)
-            })
-            .tryMap { data, response in
-                guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
-                    throw APIError.invalidResponse
-                }
-                return data
+        return requestPublisher
+            .flatMap { response -> AnyPublisher<T, APIError> in
+                AuthManager.shared.saveTokens(from: response)
+                return request()
             }
-            .decode(type: T.self, decoder: JSONDecoder())
-            .mapError { error in
-                if let error = error as? APIError {
-                    return error
-                } else {
-                    return APIError.decodingFailed(error)
-                }
+            .catch { error -> AnyPublisher<T, APIError> in
+                AuthManager.shared.clearTokens()
+                return Fail(error: APIError.sessionExpired).eraseToAnyPublisher()
             }
             .eraseToAnyPublisher()
     }
@@ -67,10 +122,6 @@ class APIService {
 
     func login(request: LoginRequest) -> AnyPublisher<AuthResponse, APIError> {
         return self.request(endpoint: "/auth/login", method: "POST", body: request)
-    }
-
-    func refreshToken(request: RefreshTokenRequest) -> AnyPublisher<AuthResponse, APIError> {
-        return self.request(endpoint: "/auth/refresh-token", method: "POST", body: request)
     }
 
     // MARK: - ToDo
@@ -94,3 +145,4 @@ class APIService {
         return self.request(endpoint: "/todo/\(id)/status", method: "POST", body: request, needsAuth: true)
     }
 }
+

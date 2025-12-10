@@ -168,7 +168,11 @@ class HomeViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { completion in
                 if case .failure(let error) = completion {
-                    self.showAlert(message: "할일 목록을 불러오는데 실패했습니다: \(error.localizedDescription)")
+                    if let apiError = error as? APIError, apiError == .sessionExpired {
+                        self.handleSessionExpired()
+                    } else {
+                        self.showAlert(message: "할일 목록을 불러오는데 실패했습니다: \(error.localizedDescription)")
+                    }
                 }
             } receiveValue: { todos in
                 self.todoItems = todos.filter { $0.status == .TODO }
@@ -192,7 +196,11 @@ class HomeViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { completion in
                 if case .failure(let error) = completion {
-                    self.showAlert(message: "할일 추가에 실패했습니다: \(error.localizedDescription)")
+                    if let apiError = error as? APIError, apiError == .sessionExpired {
+                        self.handleSessionExpired()
+                    } else {
+                        self.showAlert(message: "할일 추가에 실패했습니다: \(error.localizedDescription)")
+                    }
                 }
             } receiveValue: { _ in
                 self.todoTextField.text = ""
@@ -321,7 +329,11 @@ class HomeViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { completion in
                 if case .failure(let error) = completion {
-                    self.showAlert(message: "상태 변경에 실패했습니다: \(error.localizedDescription)")
+                    if let apiError = error as? APIError, apiError == .sessionExpired {
+                        self.handleSessionExpired()
+                    } else {
+                        self.showAlert(message: "상태 변경에 실패했습니다: \(error.localizedDescription)")
+                    }
                 }
             } receiveValue: { _ in
                 self.fetchTodayTodos()
@@ -335,6 +347,17 @@ class HomeViewController: UIViewController {
             completion?()
         })
         present(alert, animated: true)
+    }
+    
+    private func handleSessionExpired() {
+        showAlert(message: "세션이 만료되었습니다. 다시 로그인해주세요.") {
+            AuthManager.shared.clearTokens()
+            
+            guard let window = self.view.window else { return }
+            let authVC = AuthViewController()
+            window.rootViewController = authVC
+            window.makeKeyAndVisible()
+        }
     }
 }
 

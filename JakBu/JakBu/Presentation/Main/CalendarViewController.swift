@@ -1,6 +1,7 @@
 import UIKit
 import SnapKit
 import Then
+import Combine // 1. Import Combine
 
 class CalendarViewController: UIViewController {
 
@@ -8,6 +9,14 @@ class CalendarViewController: UIViewController {
 
     private var selectedDate = Date()
     private let calendar = Calendar.current
+    private var cancellables = Set<AnyCancellable>() // 2. Add cancellables set
+    private var todosForSelectedDate: [Todo] = [] // 3. Store fetched ToDos
+
+    private let apiDateFormatter: DateFormatter = { // 4. Date formatter
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 
     // MARK: - UI Components
 
@@ -72,11 +81,13 @@ class CalendarViewController: UIViewController {
         setupNavigationBar()
         setupWeekdays()
         updateMonthLabel()
-
+        
         calendarCollectionView.delegate = self
         calendarCollectionView.dataSource = self
         eventsTableView.delegate = self
         eventsTableView.dataSource = self
+
+        fetchTodos(for: selectedDate) // 6. Call fetchTodos on Load
     }
 
     // MARK: - Setup
@@ -175,6 +186,30 @@ class CalendarViewController: UIViewController {
         monthLabel.text = formatter.string(from: selectedDate)
     }
 
+    // MARK: - API Calls
+
+    private func fetchTodos(for date: Date) { // 5. Fetch ToDos for selected date
+        let formattedDate = apiDateFormatter.string(from: date)
+        APIService.shared.getTodosByDate(date: formattedDate)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                guard let self = self else { return }
+                if case .failure(let error) = completion {
+                    if let apiError = error as? APIError, apiError == .sessionExpired {
+                        self.handleSessionExpired()
+                    } else {
+                        self.showAlert(message: "일정을 불러오는데 실패했습니다: \(error.localizedDescription)")
+                    }
+                }
+            } receiveValue: { [weak self] todos in
+                guard let self = self else { return }
+                self.todosForSelectedDate = todos
+                self.eventsTableView.reloadData()
+                self.noEventsLabel.isHidden = !todos.isEmpty
+            }
+            .store(in: &cancellables)
+    }
+
     // MARK: - Actions
 
     @objc private func previousMonthTapped() {
@@ -182,6 +217,7 @@ class CalendarViewController: UIViewController {
             selectedDate = newDate
             updateMonthLabel()
             calendarCollectionView.reloadData()
+            fetchTodos(for: selectedDate) // Fetch todos for new month
         }
     }
 
@@ -190,6 +226,7 @@ class CalendarViewController: UIViewController {
             selectedDate = newDate
             updateMonthLabel()
             calendarCollectionView.reloadData()
+            fetchTodos(for: selectedDate) // Fetch todos for new month
         }
     }
 
@@ -222,6 +259,25 @@ class CalendarViewController: UIViewController {
 
         return days
     }
+    
+    private func showAlert(message: String, completion: (() -> Void)? = nil) {
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default) { _ in
+            completion?()
+        })
+        present(alert, animated: true)
+    }
+    
+    private func handleSessionExpired() {
+        showAlert(message: "세션이 만료되었습니다. 다시 로그인해주세요.") {
+            AuthManager.shared.clearTokens()
+            
+            guard let window = self.view.window else { return }
+            let authVC = AuthViewController()
+            window.rootViewController = authVC
+            window.makeKeyAndVisible()
+        }
+    }
 }
 
 // MARK: - UICollectionViewDelegate, UICollectionViewDataSource
@@ -242,12 +298,13 @@ extension CalendarViewController: UICollectionViewDelegate, UICollectionViewData
 
         if let date = date {
             let day = calendar.component(.day, from: date)
-            cell.configure(with: day)
-
-            let isToday = calendar.isDateInToday(date)
-            cell.setSelected(isToday)
+            let isCurrentMonth = calendar.isDate(date, equalTo: selectedDate, toGranularity: .month)
+            let isSelected = calendar.isDate(date, inSameDayAs: selectedDate) // Highlight selected date
+            
+            cell.configure(with: day, isCurrentMonth: isCurrentMonth)
+            cell.setSelected(isSelected)
         } else {
-            cell.configure(with: nil)
+            cell.configure(with: nil, isCurrentMonth: false)
         }
 
         return cell
@@ -257,20 +314,29 @@ extension CalendarViewController: UICollectionViewDelegate, UICollectionViewData
         let width = (collectionView.bounds.width - 48) / 7
         return CGSize(width: width, height: 44)
     }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) { // 7. didSelectItemAt
+        guard let tappedDate = getDaysInMonth()[indexPath.item] else { return }
+        selectedDate = tappedDate
+        collectionView.reloadData() // Reload to highlight new selected date
+        fetchTodos(for: selectedDate) // Fetch todos for new selected date
+    }
 }
 
 // MARK: - UITableViewDelegate, UITableViewDataSource
 
 extension CalendarViewController: UITableViewDelegate, UITableViewDataSource {
 
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return 0
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { // 8. Update data source
+        return todosForSelectedDate.count
     }
 
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell { // 8. Update data source
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "EventCell", for: indexPath) as? EventCell else {
             return UITableViewCell()
         }
+        let todo = todosForSelectedDate[indexPath.row]
+        cell.configure(with: todo) // 9. Configure EventCell
         return cell
     }
 
@@ -287,6 +353,8 @@ class CalendarCell: UICollectionViewCell {
         $0.font = .systemFont(ofSize: 16, weight: .medium)
         $0.textAlignment = .center
     }
+    
+    private var isCurrentMonth: Bool = false // Add this property
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -307,10 +375,11 @@ class CalendarCell: UICollectionViewCell {
         contentView.clipsToBounds = true
     }
 
-    func configure(with day: Int?) {
+    func configure(with day: Int?, isCurrentMonth: Bool) { // Update configure for CalendarCell
+        self.isCurrentMonth = isCurrentMonth // Store the value
         if let day = day {
             dayLabel.text = "\(day)"
-            dayLabel.textColor = .label
+            dayLabel.textColor = isCurrentMonth ? .label : .secondaryLabel
         } else {
             dayLabel.text = ""
         }
@@ -323,7 +392,7 @@ class CalendarCell: UICollectionViewCell {
             dayLabel.textColor = .white
         } else {
             contentView.backgroundColor = .clear
-            dayLabel.textColor = .label
+            dayLabel.textColor = isCurrentMonth ? .label : .secondaryLabel // Use stored value
         }
     }
 }
@@ -331,6 +400,23 @@ class CalendarCell: UICollectionViewCell {
 // MARK: - EventCell
 
 class EventCell: UITableViewCell {
+    
+    private let titleLabel = UILabel().then {
+        $0.font = .systemFont(ofSize: 16, weight: .medium)
+        $0.textColor = .label
+        $0.numberOfLines = 1
+    }
+    
+    private let statusLabel = UILabel().then {
+        $0.font = .systemFont(ofSize: 14, weight: .regular)
+        $0.textColor = .secondaryLabel
+    }
+    
+    private let containerView = UIView().then {
+        $0.backgroundColor = .secondarySystemBackground
+        $0.layer.cornerRadius = 12
+        $0.clipsToBounds = true
+    }
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -344,5 +430,40 @@ class EventCell: UITableViewCell {
     private func setupUI() {
         backgroundColor = .clear
         selectionStyle = .none
+        
+        contentView.addSubview(containerView)
+        containerView.addSubview(titleLabel)
+        containerView.addSubview(statusLabel)
+        
+        containerView.snp.makeConstraints {
+            $0.edges.equalToSuperview().inset(UIEdgeInsets(top: 4, left: 20, bottom: 4, right: 20))
+        }
+        
+        titleLabel.snp.makeConstraints {
+            $0.top.leading.equalToSuperview().offset(16)
+            $0.trailing.lessThanOrEqualToSuperview().offset(-16)
+        }
+        
+        statusLabel.snp.makeConstraints {
+            $0.leading.equalToSuperview().offset(16)
+            $0.bottom.equalToSuperview().offset(-16)
+            $0.top.equalTo(titleLabel.snp.bottom).offset(4)
+        }
+    }
+    
+    func configure(with todo: Todo) { // 9. Configure EventCell
+        titleLabel.text = todo.title
+        statusLabel.text = todo.status == .DONE ? "완료" : "미완료"
+        
+        if todo.status == .DONE {
+            let attributeString = NSMutableAttributedString(string: todo.title)
+            attributeString.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSMakeRange(0, attributeString.length))
+            titleLabel.attributedText = attributeString
+            titleLabel.textColor = .systemGray
+        } else {
+            titleLabel.attributedText = nil
+            titleLabel.text = todo.title
+            titleLabel.textColor = .label
+        }
     }
 }
