@@ -9,31 +9,33 @@ class CalendarViewController: UIViewController {
 
     private var selectedDate = Date()
     private let calendar = Calendar.current
-    private var cancellables = Set<AnyCancellable>() // 2. Add cancellables set
-    private var todosForSelectedDate: [Todo] = [] // 3. Store fetched ToDos
+    private var cancellables = Set<AnyCancellable>()
+    private var todosForSelectedDate: [Todo] = []
 
-    private let apiDateFormatter: DateFormatter = { // 4. Date formatter
+    private let apiDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
 
+    private var gradientLayer: CAGradientLayer?
+
     // MARK: - UI Components
 
     private let monthLabel = UILabel().then {
         $0.font = .systemFont(ofSize: 20, weight: .bold)
-        $0.textColor = .label
+        $0.textColor = .jakbuTextPrimary
         $0.textAlignment = .center
     }
 
     private let previousButton = UIButton(type: .system).then {
         $0.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-        $0.tintColor = .systemBlue
+        $0.tintColor = .jakbuSelectedStart
     }
 
     private let nextButton = UIButton(type: .system).then {
         $0.setImage(UIImage(systemName: "chevron.right"), for: .normal)
-        $0.tintColor = .systemBlue
+        $0.tintColor = .jakbuSelectedStart
     }
 
     private let weekdayStackView = UIStackView().then {
@@ -55,7 +57,7 @@ class CalendarViewController: UIViewController {
     private let eventsLabel = UILabel().then {
         $0.text = "일정"
         $0.font = .systemFont(ofSize: 20, weight: .bold)
-        $0.textColor = .label
+        $0.textColor = .jakbuTextPrimary
     }
 
     private let eventsTableView = UITableView().then {
@@ -67,7 +69,7 @@ class CalendarViewController: UIViewController {
     private let noEventsLabel = UILabel().then {
         $0.text = "등록된 일정이 없습니다"
         $0.font = .systemFont(ofSize: 16, weight: .medium)
-        $0.textColor = .secondaryLabel
+        $0.textColor = .jakbuTextQuaternary
         $0.textAlignment = .center
     }
 
@@ -93,7 +95,13 @@ class CalendarViewController: UIViewController {
     // MARK: - Setup
 
     private func setupUI() {
-        view.backgroundColor = .systemBackground
+        // Add gradient background
+        let gradient = UIColor.jakbuGradientLayer(
+            colors: [.jakbuBackgroundTop, .jakbuBackgroundMiddle, .jakbuBackgroundBottom],
+            frame: view.bounds
+        )
+        gradientLayer = gradient
+        view.layer.insertSublayer(gradient, at: 0)
 
         view.addSubview(monthLabel)
         view.addSubview(previousButton)
@@ -103,6 +111,11 @@ class CalendarViewController: UIViewController {
         view.addSubview(eventsLabel)
         view.addSubview(eventsTableView)
         view.addSubview(noEventsLabel)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        gradientLayer?.frame = view.bounds
     }
 
     private func setupConstraints() {
@@ -163,7 +176,29 @@ class CalendarViewController: UIViewController {
         title = "캘린더"
         navigationController?.navigationBar.prefersLargeTitles = true
 
+        // Configure navigation bar appearance
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = .clear
+
+        // Large title styling
+        appearance.largeTitleTextAttributes = [
+            .foregroundColor: UIColor.jakbuTitleStart,
+            .font: UIFont.systemFont(ofSize: 34, weight: .bold)
+        ]
+
+        // Standard title styling
+        appearance.titleTextAttributes = [
+            .foregroundColor: UIColor.jakbuTextPrimary,
+            .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
+        ]
+
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = appearance
+        navigationController?.navigationBar.compactAppearance = appearance
+
         let addButton = UIBarButtonItem(image: UIImage(systemName: "plus"), style: .plain, target: self, action: #selector(addEventTapped))
+        addButton.tintColor = .jakbuSelectedStart
         navigationItem.rightBarButtonItem = addButton
     }
 
@@ -173,7 +208,7 @@ class CalendarViewController: UIViewController {
             let label = UILabel().then {
                 $0.text = weekday
                 $0.font = .systemFont(ofSize: 14, weight: .semibold)
-                $0.textColor = .secondaryLabel
+                $0.textColor = .jakbuTextTertiary
                 $0.textAlignment = .center
             }
             weekdayStackView.addArrangedSubview(label)
@@ -353,8 +388,8 @@ class CalendarCell: UICollectionViewCell {
         $0.font = .systemFont(ofSize: 16, weight: .medium)
         $0.textAlignment = .center
     }
-    
-    private var isCurrentMonth: Bool = false // Add this property
+
+    private var isCurrentMonth: Bool = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -375,11 +410,11 @@ class CalendarCell: UICollectionViewCell {
         contentView.clipsToBounds = true
     }
 
-    func configure(with day: Int?, isCurrentMonth: Bool) { // Update configure for CalendarCell
-        self.isCurrentMonth = isCurrentMonth // Store the value
+    func configure(with day: Int?, isCurrentMonth: Bool) {
+        self.isCurrentMonth = isCurrentMonth
         if let day = day {
             dayLabel.text = "\(day)"
-            dayLabel.textColor = isCurrentMonth ? .label : .secondaryLabel
+            dayLabel.textColor = isCurrentMonth ? .jakbuTextPrimary : .jakbuTextTertiary
         } else {
             dayLabel.text = ""
         }
@@ -388,11 +423,12 @@ class CalendarCell: UICollectionViewCell {
 
     func setSelected(_ selected: Bool) {
         if selected {
-            contentView.backgroundColor = .systemBlue
+            // Create gradient background
+            contentView.backgroundColor = .jakbuSelectedStart
             dayLabel.textColor = .white
         } else {
             contentView.backgroundColor = .clear
-            dayLabel.textColor = isCurrentMonth ? .label : .secondaryLabel // Use stored value
+            dayLabel.textColor = isCurrentMonth ? .jakbuTextPrimary : .jakbuTextTertiary
         }
     }
 }
@@ -400,21 +436,23 @@ class CalendarCell: UICollectionViewCell {
 // MARK: - EventCell
 
 class EventCell: UITableViewCell {
-    
+
     private let titleLabel = UILabel().then {
         $0.font = .systemFont(ofSize: 16, weight: .medium)
-        $0.textColor = .label
+        $0.textColor = .jakbuTextPrimary
         $0.numberOfLines = 1
     }
-    
+
     private let statusLabel = UILabel().then {
         $0.font = .systemFont(ofSize: 14, weight: .regular)
-        $0.textColor = .secondaryLabel
+        $0.textColor = .jakbuTextSecondary
     }
-    
+
     private let containerView = UIView().then {
-        $0.backgroundColor = .secondarySystemBackground
+        $0.backgroundColor = .jakbuCardBackground
         $0.layer.cornerRadius = 12
+        $0.layer.borderWidth = 1
+        $0.layer.borderColor = UIColor.jakbuCardBorder.cgColor
         $0.clipsToBounds = true
     }
 
@@ -451,19 +489,19 @@ class EventCell: UITableViewCell {
         }
     }
     
-    func configure(with todo: Todo) { // 9. Configure EventCell
+    func configure(with todo: Todo) {
         titleLabel.text = todo.title
         statusLabel.text = todo.status == .DONE ? "완료" : "미완료"
-        
+
         if todo.status == .DONE {
             let attributeString = NSMutableAttributedString(string: todo.title)
             attributeString.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSMakeRange(0, attributeString.length))
             titleLabel.attributedText = attributeString
-            titleLabel.textColor = .systemGray
+            titleLabel.textColor = .jakbuTextTertiary
         } else {
             titleLabel.attributedText = nil
             titleLabel.text = todo.title
-            titleLabel.textColor = .label
+            titleLabel.textColor = .jakbuTextPrimary
         }
     }
 }

@@ -6,16 +6,18 @@ import Combine
 class HomeViewController: UIViewController {
 
     // MARK: - Properties
-    
+
     private var cancellables = Set<AnyCancellable>()
     private var todoItems: [Todo] = []
     private var doneItems: [Todo] = []
-    
+
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+
+    private var gradientLayer: CAGradientLayer?
 
     // MARK: - UI Components
 
@@ -27,22 +29,32 @@ class HomeViewController: UIViewController {
 
     private let todoSectionLabel = UILabel().then {
         $0.text = "할일 추가"
-        $0.font = .systemFont(ofSize: 18, weight: .semibold)
-        $0.textColor = .label
+        $0.font = .systemFont(ofSize: 18, weight: .bold)
+        $0.textColor = .jakbuTextPrimary
     }
 
     private let todoTextField = UITextField().then {
         $0.placeholder = "할일을 입력하세요"
-        $0.borderStyle = .roundedRect
-        $0.font = .systemFont(ofSize: 16)
-        $0.backgroundColor = .systemGray6
+        $0.borderStyle = .none
+        $0.font = .systemFont(ofSize: 16, weight: .medium)
+        $0.backgroundColor = .jakbuCardBackground
+        $0.textColor = .jakbuTextPrimary
+        $0.attributedPlaceholder = NSAttributedString(
+            string: "할일을 입력하세요",
+            attributes: [.foregroundColor: UIColor.jakbuTextPlaceholder]
+        )
         $0.layer.cornerRadius = 12
-        $0.layer.borderWidth = 0
+        $0.layer.borderWidth = 1
+        $0.layer.borderColor = UIColor.jakbuCardBorder.cgColor
+        $0.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 0))
+        $0.leftViewMode = .always
+        $0.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 0))
+        $0.rightViewMode = .always
     }
 
     private let addButton = UIButton(type: .system).then {
         $0.setImage(UIImage(systemName: "plus.circle.fill"), for: .normal)
-        $0.tintColor = .systemBlue
+        $0.tintColor = .jakbuSelectedStart
         $0.contentVerticalAlignment = .fill
         $0.contentHorizontalAlignment = .fill
     }
@@ -56,8 +68,8 @@ class HomeViewController: UIViewController {
     
     private let todayTodoSectionLabel = UILabel().then {
         $0.text = "오늘의 할일"
-        $0.font = .systemFont(ofSize: 18, weight: .semibold)
-        $0.textColor = .label
+        $0.font = .systemFont(ofSize: 18, weight: .bold)
+        $0.textColor = .jakbuTextPrimary
     }
 
     private let todoListStackView = UIStackView().then {
@@ -65,11 +77,11 @@ class HomeViewController: UIViewController {
         $0.spacing = 8
         $0.distribution = .fill
     }
-    
+
     private let doneSectionLabel = UILabel().then {
         $0.text = "완료된 할일"
-        $0.font = .systemFont(ofSize: 18, weight: .semibold)
-        $0.textColor = .label
+        $0.font = .systemFont(ofSize: 18, weight: .bold)
+        $0.textColor = .jakbuTextPrimary
     }
 
     private let doneListStackView = UIStackView().then {
@@ -96,7 +108,13 @@ class HomeViewController: UIViewController {
     // MARK: - Setup
 
     private func setupUI() {
-        view.backgroundColor = .systemBackground
+        // Add gradient background
+        let gradient = UIColor.jakbuGradientLayer(
+            colors: [.jakbuBackgroundTop, .jakbuBackgroundMiddle, .jakbuBackgroundBottom],
+            frame: view.bounds
+        )
+        gradientLayer = gradient
+        view.layer.insertSublayer(gradient, at: 0)
 
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
@@ -109,6 +127,11 @@ class HomeViewController: UIViewController {
         contentView.addSubview(todoListStackView)
         contentView.addSubview(doneSectionLabel)
         contentView.addSubview(doneListStackView)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        gradientLayer?.frame = view.bounds
     }
 
     private func setupConstraints() {
@@ -165,8 +188,29 @@ class HomeViewController: UIViewController {
     }
 
     private func setupNavigationBar() {
-        title = "작부"
+        title = "JakBu"
         navigationController?.navigationBar.prefersLargeTitles = true
+
+        // Configure navigation bar appearance
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = .clear
+
+        // Large title styling
+        appearance.largeTitleTextAttributes = [
+            .foregroundColor: UIColor.jakbuTitleStart,
+            .font: UIFont.systemFont(ofSize: 34, weight: .bold)
+        ]
+
+        // Standard title styling
+        appearance.titleTextAttributes = [
+            .foregroundColor: UIColor.jakbuTextPrimary,
+            .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
+        ]
+
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = appearance
+        navigationController?.navigationBar.compactAppearance = appearance
     }
 
     private func setupActions() {
@@ -259,34 +303,38 @@ class HomeViewController: UIViewController {
     private func createPlaceholderView(withText text: String) -> UIView {
         let placeholderLabel = UILabel().then {
             $0.text = text
-            $0.font = .systemFont(ofSize: 16)
-            $0.textColor = .systemGray
+            $0.font = .systemFont(ofSize: 16, weight: .medium)
+            $0.textColor = .jakbuTextQuaternary
             $0.textAlignment = .center
         }
 
         let containerView = UIView().then {
-            $0.backgroundColor = .secondarySystemBackground
+            $0.backgroundColor = .jakbuCardBackgroundSecondary
             $0.layer.cornerRadius = 12
+            $0.layer.borderWidth = 1
+            $0.layer.borderColor = UIColor.jakbuCardBorder.cgColor
             $0.clipsToBounds = true
             $0.tag = -1 // Assign a unique negative tag for placeholders
         }
-        
+
         containerView.addSubview(placeholderLabel)
         placeholderLabel.snp.makeConstraints {
             $0.edges.equalToSuperview().inset(16)
         }
-        
+
         containerView.snp.makeConstraints {
             $0.height.equalTo(56)
         }
-        
+
         return containerView
     }
 
     private func createTodoItemView(item: Todo) -> UIView {
         let containerView = UIView().then {
-            $0.backgroundColor = .secondarySystemBackground
+            $0.backgroundColor = .jakbuCardBackground
             $0.layer.cornerRadius = 12
+            $0.layer.borderWidth = 1
+            $0.layer.borderColor = UIColor.jakbuCardBorder.cgColor
             $0.clipsToBounds = true
             let tapGesture = UITapGestureRecognizer(target: self, action: #selector(todoItemTapped(_:)))
             $0.addGestureRecognizer(tapGesture)
@@ -298,7 +346,7 @@ class HomeViewController: UIViewController {
             let isDone = item.status == .DONE
             let imageName = isDone ? "checkmark.circle.fill" : "circle"
             $0.setImage(UIImage(systemName: imageName), for: .normal)
-            $0.tintColor = .systemBlue
+            $0.tintColor = isDone ? .systemGreen : .jakbuSelectedStart
             $0.isUserInteractionEnabled = false
             $0.tag = 101 // Unique tag for checkButton
         }
@@ -306,13 +354,13 @@ class HomeViewController: UIViewController {
         let textLabel = UILabel().then {
             $0.text = item.title
             $0.font = .systemFont(ofSize: 16, weight: .medium)
-            $0.textColor = .label
+            $0.textColor = .jakbuTextPrimary
             $0.numberOfLines = 0
             if item.status == .DONE {
                 let attributeString = NSMutableAttributedString(string: item.title)
                 attributeString.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSMakeRange(0, attributeString.length))
                 $0.attributedText = attributeString
-                $0.textColor = .systemGray
+                $0.textColor = .jakbuTextTertiary
             }
             $0.tag = 102 // Unique tag for textLabel
         }
@@ -380,19 +428,20 @@ class HomeViewController: UIViewController {
 
         let imageName = isDone ? "checkmark.circle.fill" : "circle"
         checkButton.setImage(UIImage(systemName: imageName), for: .normal)
-        
+        checkButton.tintColor = isDone ? .systemGreen : .jakbuSelectedStart
+
         // Ensure textLabel.text is not nil before attempting to get its string value
         let originalText = (textLabel.attributedText?.string ?? textLabel.text) ?? ""
-        
+
         if isDone {
             let attributeString = NSMutableAttributedString(string: originalText)
             attributeString.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSMakeRange(0, attributeString.length))
             textLabel.attributedText = attributeString
-            textLabel.textColor = .systemGray
+            textLabel.textColor = .jakbuTextTertiary
         } else {
             textLabel.attributedText = nil
             textLabel.text = originalText
-            textLabel.textColor = .label
+            textLabel.textColor = .jakbuTextPrimary
         }
     }
     
