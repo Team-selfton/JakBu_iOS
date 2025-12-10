@@ -42,18 +42,13 @@ struct Provider: TimelineProvider {
     }
 
     private func fetchTodoEntry(completion: @escaping (TodoWidgetEntry) -> ()) {
-        // --- 가상 데이터 ---
-        let sampleTodos = [
-            Todo(id: 1, title: "동아리 활동", date: "2025-12-10", status: .TODO),
-            Todo(id: 2, title: "SwiftUI 공부", date: "2025-12-10", status: .TODO),
-            Todo(id: 3, title: "알고리즘 문제 풀기", date: "2025-12-10", status: .TODO),
-            Todo(id: 4, title: "TIL 작성하기", date: "2025-12-10", status: .DONE),
-            Todo(id: 5, title: "프로젝트 회의", date: "2025-12-10", status: .DONE)
-        ]
-        
-        let todoItems = sampleTodos.filter { $0.status == .TODO }
-        let doneItems = sampleTodos.filter { $0.status == .DONE }
-        
+        // SharedDataManager를 통해 실제 데이터 로드
+        let sharedManager = WidgetSharedDataManager.shared
+        let allTodos = sharedManager.loadTodos()
+
+        let todoItems = allTodos.filter { $0.status == .TODO }
+        let doneItems = allTodos.filter { $0.status == .DONE }
+
         let entry = TodoWidgetEntry(date: Date(), todoItems: todoItems, doneItems: doneItems)
         completion(entry)
     }

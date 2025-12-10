@@ -260,6 +260,9 @@ class HomeViewController: UIViewController {
                 self.todoItems = todos.filter { $0.status == .TODO }
                 self.doneItems = todos.filter { $0.status == .DONE }
                 self.updateUI()
+
+                // 위젯 데이터 업데이트
+                SharedDataManager.shared.saveTodos(todos)
             }
             .store(in: &cancellables)
     }
@@ -288,6 +291,9 @@ class HomeViewController: UIViewController {
                 self.todoTextField.text = ""
                 self.todoTextField.resignFirstResponder()
                 self.fetchTodayTodos()
+
+                // 위젯 새로고침
+                SharedDataManager.shared.reloadAllWidgets()
             }
             .store(in: &cancellables)
     }
@@ -443,7 +449,7 @@ class HomeViewController: UIViewController {
                 }
             } receiveValue: { [weak self] updatedTodo in
                 guard let self = self else { return }
-                
+
                 // Update the data source
                 if let index = self.todoItems.firstIndex(where: { $0.id == tappedId }) {
                     self.todoItems.remove(at: index)
@@ -454,6 +460,10 @@ class HomeViewController: UIViewController {
                 }
                 // Re-render UI after data source update
                 self.updateUI()
+
+                // 위젯 데이터 업데이트
+                let allTodos = self.todoItems + self.doneItems
+                SharedDataManager.shared.saveTodos(allTodos)
             }
             .store(in: &cancellables)
     }
