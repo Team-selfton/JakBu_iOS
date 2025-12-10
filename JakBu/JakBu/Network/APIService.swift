@@ -168,5 +168,43 @@ class APIService {
     func setTodoStatus(id: Int, request: SetTodoStatusRequest) -> AnyPublisher<Todo, APIError> {
         return self.request(endpoint: "/todo/\(id)/status", method: "POST", body: request, needsAuth: true)
     }
+
+    func deleteTodo(id: Int) -> AnyPublisher<Void, APIError> {
+        let urlRequest = self.createRequest(endpoint: "/todo/\(id)", method: "DELETE", needsAuth: true)
+
+        return URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .handleEvents(receiveOutput: { output in
+                NetworkLogger.shared.log(response: output.response, data: output.data)
+            })
+            .tryMap { data, response in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+                if httpResponse.statusCode == 401 {
+                    throw APIError.unauthorized
+                }
+                if httpResponse.statusCode == 403 {
+                    throw APIError.sessionExpired
+                }
+                guard 200..<300 ~= httpResponse.statusCode else {
+                    throw APIError.invalidResponse
+                }
+                return ()
+            }
+            .mapError { error -> APIError in
+                if let apiError = error as? APIError {
+                    return apiError
+                }
+                return APIError.requestFailed(error)
+            }
+            .catch { error -> AnyPublisher<Void, APIError> in
+                if error == .unauthorized {
+                    return self.refreshTokenAndRetry(request: { self.deleteTodo(id: id) })
+                } else {
+                    return Fail(error: error).eraseToAnyPublisher()
+                }
+            }
+            .eraseToAnyPublisher()
+    }
 }
 

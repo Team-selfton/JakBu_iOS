@@ -449,8 +449,16 @@ class HomeViewController: UIViewController {
             $0.tag = 102 // Unique tag for textLabel
         }
 
+        let deleteButton = UIButton(type: .system).then {
+            $0.setImage(UIImage(systemName: "xmark"), for: .normal)
+            $0.tintColor = .jakbuTextTertiary
+            $0.addTarget(self, action: #selector(deleteButtonTapped(_:)), for: .touchUpInside)
+            $0.tag = item.id
+        }
+
         containerView.addSubview(checkButton)
         containerView.addSubview(textLabel)
+        containerView.addSubview(deleteButton)
 
         checkButton.snp.makeConstraints {
             $0.leading.equalToSuperview().offset(16)
@@ -458,9 +466,15 @@ class HomeViewController: UIViewController {
             $0.width.height.equalTo(24)
         }
 
+        deleteButton.snp.makeConstraints {
+            $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+            $0.width.height.equalTo(20)
+        }
+
         textLabel.snp.makeConstraints {
             $0.leading.equalTo(checkButton.snp.trailing).offset(12)
-            $0.trailing.equalToSuperview().offset(-16)
+            $0.trailing.equalTo(deleteButton.snp.leading).offset(-12)
             $0.top.equalToSuperview().offset(16)
             $0.bottom.equalToSuperview().offset(-16)
         }
@@ -556,6 +570,47 @@ class HomeViewController: UIViewController {
         }
     }
     
+    @objc private func deleteButtonTapped(_ sender: UIButton) {
+        let todoId = sender.tag
+
+        let alert = UIAlertController(title: "할일 삭제", message: "이 할일을 삭제하시겠습니까?", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel, handler: nil))
+        alert.addAction(UIAlertAction(title: "삭제", style: .destructive, handler: { _ in
+            self.deleteTodo(id: todoId)
+        }))
+        present(alert, animated: true)
+    }
+
+    private func deleteTodo(id: Int) {
+        APIService.shared.deleteTodo(id: id)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                guard let self = self else { return }
+                if case .failure(let error) = completion {
+                    if let apiError = error as? APIError, apiError == .sessionExpired {
+                        self.handleSessionExpired()
+                    } else {
+                        self.showAlert(message: "할일 삭제에 실패했습니다: \(error.localizedDescription)")
+                    }
+                }
+            } receiveValue: { [weak self] _ in
+                guard let self = self else { return }
+
+                // Remove from data source
+                self.todoItems.removeAll { $0.id == id }
+                self.doneItems.removeAll { $0.id == id }
+
+                // Re-render UI
+                self.updateUI()
+
+                // 위젯 데이터 업데이트
+                let allTodos = self.todoItems + self.doneItems
+                SharedDataManager.shared.saveTodos(allTodos)
+                SharedDataManager.shared.reloadAllWidgets()
+            }
+            .store(in: &cancellables)
+    }
+
     private func showAlert(message: String, completion: (() -> Void)? = nil) {
         let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "확인", style: .default) { _ in
@@ -563,7 +618,7 @@ class HomeViewController: UIViewController {
         })
         present(alert, animated: true)
     }
-    
+
     private func handleSessionExpired() {
         showAlert(message: "세션이 만료되었습니다. 다시 로그인해주세요.") {
             self.performLogout()
