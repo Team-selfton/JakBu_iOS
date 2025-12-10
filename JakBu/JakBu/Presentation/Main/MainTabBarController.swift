@@ -42,6 +42,7 @@ class MainTabBarController: UITabBarController {
 
         tabBar.tintColor = .jakbuSelectedStart
         tabBar.unselectedItemTintColor = .jakbuTextQuaternary
+        tabBar.itemPositioning = .fill
     }
 
     private func setupTabs() {
