@@ -91,23 +91,13 @@ struct SmallWidgetView: View {
     var entry: TodoWidgetEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            WidgetHeaderView()
+        VStack {
             Spacer()
             ProgressCircleView(
                 total: entry.todoItems.count + entry.doneItems.count,
                 completed: entry.doneItems.count
             )
             Spacer()
-            VStack(alignment: .leading, spacing: 4) {
-                Text("남은 할일")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.6))
-                Text("\(entry.todoItems.count)개")
-                    .font(.title2)
-                    .bold()
-                    .foregroundColor(.white)
-            }
         }
         .padding()
     }
