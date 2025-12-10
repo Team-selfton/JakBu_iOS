@@ -6,6 +6,7 @@ class MainTabBarController: UITabBarController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.delegate = self // Set the delegate to self
         setupUI()
         setupTabs()
     }
@@ -53,5 +54,12 @@ class MainTabBarController: UITabBarController {
         calendarNav.tabBarItem = UITabBarItem(title: "캘린더", image: UIImage(systemName: "calendar"), tag: 1)
 
         viewControllers = [homeNav, calendarNav]
+    }
+}
+
+// MARK: - UITabBarControllerDelegate
+extension MainTabBarController: UITabBarControllerDelegate {
+    func tabBarController(_ tabBarController: UITabBarController, animationControllerForTransitionFrom fromVC: UIViewController, to toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        return TabBarFadeAnimator()
     }
 }
