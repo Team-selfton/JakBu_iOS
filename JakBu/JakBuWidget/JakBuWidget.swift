@@ -89,141 +89,258 @@ struct JakBuWidgetEntryView : View {
 
 struct SmallWidgetView: View {
     var entry: TodoWidgetEntry
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            WidgetHeaderView()
-            
-            Spacer()
 
-            ProgressCircleView(
-                total: entry.todoItems.count + entry.doneItems.count,
-                completed: entry.doneItems.count
+    var body: some View {
+        ZStack {
+            // 다크 그라데이션 배경
+            LinearGradient(
+                colors: [
+                    Color(red: 0x1e/255, green: 0x2a/255, blue: 0x3f/255),
+                    Color(red: 0x1a/255, green: 0x23/255, blue: 0x32/255),
+                    Color(red: 0x0f/255, green: 0x15/255, blue: 0x20/255)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
             )
-            
-            Spacer()
-            
-            Text("남은 할일: \(entry.todoItems.count)개")
-                .font(.caption)
-                .bold()
-                .foregroundColor(.secondary)
+            .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 12) {
+                WidgetHeaderView()
+
+                Spacer()
+
+                ProgressCircleView(
+                    total: entry.todoItems.count + entry.doneItems.count,
+                    completed: entry.doneItems.count
+                )
+
+                Spacer()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("남은 할일")
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.6))
+                    Text("\(entry.todoItems.count)개")
+                        .font(.title2)
+                        .bold()
+                        .foregroundColor(.white)
+                }
+            }
+            .padding()
         }
-        .padding()
     }
 }
 
 struct MediumWidgetView: View {
     var entry: TodoWidgetEntry
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            WidgetHeaderView()
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading) {
-                    Text("할일")
-                        .font(.caption).bold().foregroundColor(.secondary)
-                    ForEach(entry.todoItems.prefix(3)) { todo in
-                        TodoRow(todo: todo)
+        ZStack {
+            // 다크 그라데이션 배경
+            LinearGradient(
+                colors: [
+                    Color(red: 0x1e/255, green: 0x2a/255, blue: 0x3f/255),
+                    Color(red: 0x1a/255, green: 0x23/255, blue: 0x32/255),
+                    Color(red: 0x0f/255, green: 0x15/255, blue: 0x20/255)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 12) {
+                WidgetHeaderView()
+
+                HStack(alignment: .top, spacing: 12) {
+                    // 할일 섹션
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "circle")
+                                .font(.caption2)
+                                .foregroundColor(Color(red: 0x5b/255, green: 0x8d/255, blue: 0xd5/255))
+                            Text("할일")
+                                .font(.caption)
+                                .bold()
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+
+                        if entry.todoItems.isEmpty {
+                            Text("없음")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.4))
+                                .padding(.leading, 4)
+                        } else {
+                            ForEach(entry.todoItems.prefix(3)) { todo in
+                                TodoRow(todo: todo)
+                            }
+                        }
+
+                        Spacer()
                     }
-                }
-                
-                VStack(alignment: .leading) {
-                    Text("한일")
-                        .font(.caption).bold().foregroundColor(.secondary)
-                    ForEach(entry.doneItems.prefix(2)) { todo in
-                        TodoRow(todo: todo)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Divider()
+                        .frame(height: 60)
+                        .overlay(Color.white.opacity(0.1))
+
+                    // 완료 섹션
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.caption2)
+                                .foregroundColor(.green)
+                            Text("완료")
+                                .font(.caption)
+                                .bold()
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+
+                        if entry.doneItems.isEmpty {
+                            Text("없음")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.4))
+                                .padding(.leading, 4)
+                        } else {
+                            ForEach(entry.doneItems.prefix(3)) { todo in
+                                TodoRow(todo: todo)
+                            }
+                        }
+
+                        Spacer()
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+
+                Spacer()
             }
-            Spacer()
+            .padding()
         }
-        .padding()
     }
 }
 
 
 struct WidgetHeaderView: View {
     var body: some View {
-        HStack {
-            Text("작부")
-                .font(.subheadline)
-                .fontWeight(.bold)
-                .foregroundColor(.blue)
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("JakBu")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(Color(red: 0x6b/255, green: 0x9b/255, blue: 0xd8/255))
+                Text("작심삼일 부수기")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.6))
+            }
             Spacer()
-            Image(systemName: "paperplane.fill")
-                .foregroundColor(.blue)
         }
     }
 }
 
 struct TodoRow: View {
     let todo: Todo
-    
+
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             Image(systemName: todo.status == .DONE ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(todo.status == .DONE ? .green : .blue)
-                .font(.subheadline)
-            
+                .foregroundColor(todo.status == .DONE ? .green : Color(red: 0x5b/255, green: 0x8d/255, blue: 0xd5/255))
+                .font(.caption2)
+
             Text(todo.title)
-                .font(.subheadline)
-                .strikethrough(todo.status == .DONE, color: .secondary)
-                .foregroundColor(todo.status == .DONE ? .secondary : .primary)
+                .font(.caption2)
+                .lineLimit(1)
+                .strikethrough(todo.status == .DONE, color: .white.opacity(0.4))
+                .foregroundColor(todo.status == .DONE ? .white.opacity(0.5) : .white.opacity(0.9))
         }
+        .padding(.horizontal, 4)
     }
 }
 
 struct ProgressCircleView: View {
     let total: Int
     let completed: Int
-    
+
     private var progress: Double {
         total > 0 ? Double(completed) / Double(total) : 0
     }
-    
+
+    private var progressColor: Color {
+        if progress >= 1.0 {
+            return .green
+        } else if progress >= 0.5 {
+            return Color(red: 0x5b/255, green: 0x8d/255, blue: 0xd5/255)
+        } else {
+            return Color(red: 0x6b/255, green: 0x9b/255, blue: 0xd8/255)
+        }
+    }
+
     var body: some View {
         ZStack {
             Circle()
-                .stroke(lineWidth: 8)
+                .stroke(lineWidth: 10)
                 .opacity(0.2)
-                .foregroundColor(.gray)
+                .foregroundColor(.white)
 
             Circle()
                 .trim(from: 0.0, to: CGFloat(min(self.progress, 1.0)))
-                .stroke(style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-                .foregroundColor(.blue)
+                .stroke(style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
+                .foregroundColor(progressColor)
                 .rotationEffect(Angle(degrees: 270.0))
-                .animation(.linear, value: progress)
-            
-            VStack {
+                .animation(.easeInOut, value: progress)
+
+            VStack(spacing: 2) {
                 Text("\(completed)/\(total)")
-                    .font(.headline)
+                    .font(.title2)
                     .bold()
+                    .foregroundColor(.white)
                 Text("완료")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.6))
             }
         }
+        .frame(width: 80, height: 80)
     }
 }
 
 
 struct EmptyStateView: View {
     var body: some View {
-        VStack(alignment: .center, spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.largeTitle)
-                .foregroundColor(.blue)
-            
-            Text("오늘의 모든 할일을 완료했어요!")
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            Text("새로운 할일을 추가해보세요.")
-                .font(.caption)
-                .foregroundColor(.secondary)
+        ZStack {
+            // 다크 그라데이션 배경
+            LinearGradient(
+                colors: [
+                    Color(red: 0x1e/255, green: 0x2a/255, blue: 0x3f/255),
+                    Color(red: 0x1a/255, green: 0x23/255, blue: 0x32/255),
+                    Color(red: 0x0f/255, green: 0x15/255, blue: 0x20/255)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                WidgetHeaderView()
+                    .padding(.horizontal)
+
+                Spacer()
+
+                VStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.green)
+
+                    Text("모든 할일 완료!")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+
+                    Text("새로운 할일을 추가해보세요")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.6))
+                }
+
+                Spacer()
+            }
+            .padding()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
