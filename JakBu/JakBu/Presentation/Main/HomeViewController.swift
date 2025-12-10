@@ -27,6 +27,18 @@ class HomeViewController: UIViewController {
 
     private let contentView = UIView()
 
+    private let titleLabel = UILabel().then {
+        $0.text = "JakBu"
+        $0.font = .systemFont(ofSize: 40, weight: .bold)
+        $0.textColor = .jakbuTitleStart
+    }
+
+    private let subtitleLabel = UILabel().then {
+        $0.text = "작심삼일 부수기"
+        $0.font = .systemFont(ofSize: 14, weight: .medium)
+        $0.textColor = .jakbuTextSecondary
+    }
+
     private let todoSectionLabel = UILabel().then {
         $0.text = "할일 추가"
         $0.font = .systemFont(ofSize: 18, weight: .bold)
@@ -36,19 +48,19 @@ class HomeViewController: UIViewController {
     private let todoTextField = UITextField().then {
         $0.placeholder = "할일을 입력하세요"
         $0.borderStyle = .none
-        $0.font = .systemFont(ofSize: 16, weight: .medium)
+        $0.font = .systemFont(ofSize: 17, weight: .medium)
         $0.backgroundColor = .jakbuCardBackground
         $0.textColor = .jakbuTextPrimary
         $0.attributedPlaceholder = NSAttributedString(
             string: "할일을 입력하세요",
             attributes: [.foregroundColor: UIColor.jakbuTextPlaceholder]
         )
-        $0.layer.cornerRadius = 12
+        $0.layer.cornerRadius = 16
         $0.layer.borderWidth = 1
         $0.layer.borderColor = UIColor.jakbuCardBorder.cgColor
-        $0.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 0))
+        $0.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 20, height: 0))
         $0.leftViewMode = .always
-        $0.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 0))
+        $0.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 20, height: 0))
         $0.rightViewMode = .always
     }
 
@@ -96,13 +108,17 @@ class HomeViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupConstraints()
-        setupNavigationBar()
         setupActions()
 
         addButton.isEnabled = false
         addButton.alpha = 0.5
-        
+
         fetchTodayTodos()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
     }
 
     // MARK: - Setup
@@ -119,6 +135,8 @@ class HomeViewController: UIViewController {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
 
+        contentView.addSubview(titleLabel)
+        contentView.addSubview(subtitleLabel)
         contentView.addSubview(todoSectionLabel)
         todoInputStackView.addArrangedSubview(todoTextField)
         todoInputStackView.addArrangedSubview(addButton)
@@ -144,21 +162,36 @@ class HomeViewController: UIViewController {
             $0.width.equalToSuperview()
         }
 
-        todoSectionLabel.snp.makeConstraints {
+        titleLabel.snp.makeConstraints {
             $0.top.equalToSuperview().offset(24)
             $0.leading.equalToSuperview().offset(20)
             $0.trailing.equalToSuperview().offset(-20)
+        }
+
+        subtitleLabel.snp.makeConstraints {
+            $0.top.equalTo(titleLabel.snp.bottom).offset(4)
+            $0.leading.equalToSuperview().offset(20)
+            $0.trailing.equalToSuperview().offset(-20)
+        }
+
+        todoSectionLabel.snp.makeConstraints {
+            $0.top.equalTo(subtitleLabel.snp.bottom).offset(24)
+            $0.leading.equalToSuperview().offset(20)
+            $0.trailing.equalToSuperview().offset(-20)
+        }
+
+        todoTextField.snp.makeConstraints {
+            $0.height.equalTo(50)
         }
 
         todoInputStackView.snp.makeConstraints {
             $0.top.equalTo(todoSectionLabel.snp.bottom).offset(12)
             $0.leading.equalToSuperview().offset(20)
             $0.trailing.equalToSuperview().offset(-20)
-            $0.height.equalTo(60)
         }
 
         addButton.snp.makeConstraints {
-            $0.width.height.equalTo(50)
+            $0.width.height.equalTo(65)
         }
 
         todayTodoSectionLabel.snp.makeConstraints {
@@ -185,32 +218,6 @@ class HomeViewController: UIViewController {
             $0.trailing.equalToSuperview().offset(-20)
             $0.bottom.equalToSuperview().offset(-20)
         }
-    }
-
-    private func setupNavigationBar() {
-        title = "JakBu"
-        navigationController?.navigationBar.prefersLargeTitles = true
-
-        // Configure navigation bar appearance
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.backgroundColor = .clear
-
-        // Large title styling
-        appearance.largeTitleTextAttributes = [
-            .foregroundColor: UIColor.jakbuTitleStart,
-            .font: UIFont.systemFont(ofSize: 34, weight: .bold)
-        ]
-
-        // Standard title styling
-        appearance.titleTextAttributes = [
-            .foregroundColor: UIColor.jakbuTextPrimary,
-            .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
-        ]
-
-        navigationController?.navigationBar.standardAppearance = appearance
-        navigationController?.navigationBar.scrollEdgeAppearance = appearance
-        navigationController?.navigationBar.compactAppearance = appearance
     }
 
     private func setupActions() {

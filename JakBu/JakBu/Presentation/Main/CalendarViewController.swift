@@ -80,16 +80,20 @@ class CalendarViewController: UIViewController {
         setupUI()
         setupConstraints()
         setupActions()
-        setupNavigationBar()
         setupWeekdays()
         updateMonthLabel()
-        
+
         calendarCollectionView.delegate = self
         calendarCollectionView.dataSource = self
         eventsTableView.delegate = self
         eventsTableView.dataSource = self
 
-        fetchTodos(for: selectedDate) // 6. Call fetchTodos on Load
+        fetchTodos(for: selectedDate)
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
     }
 
     // MARK: - Setup
@@ -172,36 +176,6 @@ class CalendarViewController: UIViewController {
         nextButton.addTarget(self, action: #selector(nextMonthTapped), for: .touchUpInside)
     }
 
-    private func setupNavigationBar() {
-        title = "캘린더"
-        navigationController?.navigationBar.prefersLargeTitles = true
-
-        // Configure navigation bar appearance
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.backgroundColor = .clear
-
-        // Large title styling
-        appearance.largeTitleTextAttributes = [
-            .foregroundColor: UIColor.jakbuTitleStart,
-            .font: UIFont.systemFont(ofSize: 34, weight: .bold)
-        ]
-
-        // Standard title styling
-        appearance.titleTextAttributes = [
-            .foregroundColor: UIColor.jakbuTextPrimary,
-            .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
-        ]
-
-        navigationController?.navigationBar.standardAppearance = appearance
-        navigationController?.navigationBar.scrollEdgeAppearance = appearance
-        navigationController?.navigationBar.compactAppearance = appearance
-
-        let addButton = UIBarButtonItem(image: UIImage(systemName: "plus"), style: .plain, target: self, action: #selector(addEventTapped))
-        addButton.tintColor = .jakbuSelectedStart
-        navigationItem.rightBarButtonItem = addButton
-    }
-
     private func setupWeekdays() {
         let weekdays = ["일", "월", "화", "수", "목", "금", "토"]
         for weekday in weekdays {
@@ -263,10 +237,6 @@ class CalendarViewController: UIViewController {
             calendarCollectionView.reloadData()
             fetchTodos(for: selectedDate) // Fetch todos for new month
         }
-    }
-
-    @objc private func addEventTapped() {
-        // TODO: 일정 추가 화면으로 이동
     }
 
     // MARK: - Helper Methods
