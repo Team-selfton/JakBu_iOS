@@ -26,7 +26,7 @@ class HomeViewController: UIViewController {
     private let contentView = UIView()
 
     private let todoSectionLabel = UILabel().then {
-        $0.text = "오늘의 할일을 추가해보세요"
+        $0.text = "할일 추가"
         $0.font = .systemFont(ofSize: 18, weight: .semibold)
         $0.textColor = .label
     }
@@ -52,6 +52,12 @@ class HomeViewController: UIViewController {
         $0.spacing = 12
         $0.alignment = .center
         $0.distribution = .fill
+    }
+    
+    private let todayTodoSectionLabel = UILabel().then {
+        $0.text = "오늘의 할일"
+        $0.font = .systemFont(ofSize: 18, weight: .semibold)
+        $0.textColor = .label
     }
 
     private let todoListStackView = UIStackView().then {
@@ -99,6 +105,7 @@ class HomeViewController: UIViewController {
         todoInputStackView.addArrangedSubview(todoTextField)
         todoInputStackView.addArrangedSubview(addButton)
         contentView.addSubview(todoInputStackView)
+        contentView.addSubview(todayTodoSectionLabel)
         contentView.addSubview(todoListStackView)
         contentView.addSubview(doneSectionLabel)
         contentView.addSubview(doneListStackView)
@@ -131,8 +138,14 @@ class HomeViewController: UIViewController {
             $0.width.height.equalTo(50)
         }
 
+        todayTodoSectionLabel.snp.makeConstraints {
+            $0.top.equalTo(todoInputStackView.snp.bottom).offset(24)
+            $0.leading.equalToSuperview().offset(20)
+            $0.trailing.equalToSuperview().offset(-20)
+        }
+
         todoListStackView.snp.makeConstraints {
-            $0.top.equalTo(todoInputStackView.snp.bottom).offset(12)
+            $0.top.equalTo(todayTodoSectionLabel.snp.bottom).offset(12)
             $0.leading.equalToSuperview().offset(20)
             $0.trailing.equalToSuperview().offset(-20)
         }
