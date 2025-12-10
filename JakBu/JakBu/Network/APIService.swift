@@ -1,14 +1,33 @@
 import Foundation
 import Combine
 
-enum APIError: Error, Equatable {
+enum APIError: Error, Equatable, LocalizedError {
     case invalidURL
     case requestFailed(Error)
     case invalidResponse
     case decodingFailed(Error)
-    case unauthorized
-    case sessionExpired
+    case unauthorized // For 401 Unauthorized - often due to incorrect credentials
+    case sessionExpired // For 403 Forbidden or expired tokens that cannot be refreshed
     case serverError(message: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "유효하지 않은 URL입니다."
+        case .requestFailed(_): // Removed error.localizedDescription
+            return "네트워크 연결을 확인해주세요."
+        case .invalidResponse:
+            return "서버 응답 처리 중 문제가 발생했습니다."
+        case .decodingFailed(_): // Removed error.localizedDescription
+            return "데이터를 읽어오는 중 오류가 발생했습니다."
+        case .unauthorized:
+            return "비밀번호가 틀렸습니다."
+        case .sessionExpired:
+            return "세션이 만료되었습니다. 다시 로그인해주세요."
+        case .serverError(_): // Removed message
+            return "서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요."
+        }
+    }
 
     static func == (lhs: APIError, rhs: APIError) -> Bool {
         switch (lhs, rhs) {
@@ -23,8 +42,10 @@ enum APIError: Error, Equatable {
         case (.serverError(let lMsg), .serverError(let rMsg)):
             return lMsg == rMsg
         case (.requestFailed, .requestFailed):
+            // Cannot compare associated error directly for Equatable
             return true
         case (.decodingFailed, .decodingFailed):
+            // Cannot compare associated error directly for Equatable
             return true
         default:
             return false
@@ -52,6 +73,9 @@ class APIService {
                 }
                 if httpResponse.statusCode == 401 {
                     throw APIError.unauthorized
+                }
+                if httpResponse.statusCode == 403 {
+                    throw APIError.sessionExpired
                 }
                 guard 200..<300 ~= httpResponse.statusCode else {
                     throw APIError.invalidResponse
