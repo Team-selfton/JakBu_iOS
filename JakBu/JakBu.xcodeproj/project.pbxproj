@@ -9,10 +9,40 @@
 /* Begin PBXBuildFile section */
 		6F150FD82EE947C50072377C /* Then in Frameworks */ = {isa = PBXBuildFile; productRef = 6F150FD72EE947C50072377C /* Then */; };
 		6F150FDB2EE947D10072377C /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6F150FDA2EE947D10072377C /* SnapKit */; };
+		6F150FFD2EE962260072377C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6F150FFC2EE962260072377C /* WidgetKit.framework */; };
+		6F150FFF2EE962260072377C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6F150FFE2EE962260072377C /* SwiftUI.framework */; };
+		6F1510102EE962270072377C /* JakBuWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6F150FFA2EE962260072377C /* JakBuWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		6F15100E2EE962270072377C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6F150FB62EE9452F0072377C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6F150FF92EE962260072377C;
+			remoteInfo = JakBuWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6F1510152EE962270072377C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6F1510102EE962270072377C /* JakBuWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		6F150FBE2EE9452F0072377C /* JakBu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JakBu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F150FFA2EE962260072377C /* JakBuWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JakBuWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F150FFC2EE962260072377C /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		6F150FFE2EE962260072377C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -23,6 +53,13 @@
 			);
 			target = 6F150FBD2EE9452F0072377C /* JakBu */;
 		};
+		6F1510142EE962270072377C /* Exceptions for "JakBuWidget" folder in "JakBuWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6F150FF92EE962260072377C /* JakBuWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +69,14 @@
 				6F150FD02EE945310072377C /* Exceptions for "JakBu" folder in "JakBu" target */,
 			);
 			path = JakBu;
+			sourceTree = "<group>";
+		};
+		6F1510002EE962260072377C /* JakBuWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6F1510142EE962270072377C /* Exceptions for "JakBuWidget" folder in "JakBuWidgetExtension" target */,
+			);
+			path = JakBuWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -46,6 +91,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6F150FF72EE962260072377C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6F150FFF2EE962260072377C /* SwiftUI.framework in Frameworks */,
+				6F150FFD2EE962260072377C /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -53,6 +107,8 @@
 			isa = PBXGroup;
 			children = (
 				6F150FC02EE9452F0072377C /* JakBu */,
+				6F1510002EE962260072377C /* JakBuWidget */,
+				6F150FFB2EE962260072377C /* Frameworks */,
 				6F150FBF2EE9452F0072377C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,8 +117,18 @@
 			isa = PBXGroup;
 			children = (
 				6F150FBE2EE9452F0072377C /* JakBu.app */,
+				6F150FFA2EE962260072377C /* JakBuWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		6F150FFB2EE962260072377C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				6F150FFC2EE962260072377C /* WidgetKit.framework */,
+				6F150FFE2EE962260072377C /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -75,10 +141,12 @@
 				6F150FBA2EE9452F0072377C /* Sources */,
 				6F150FBB2EE9452F0072377C /* Frameworks */,
 				6F150FBC2EE9452F0072377C /* Resources */,
+				6F1510152EE962270072377C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				6F15100F2EE962270072377C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				6F150FC02EE9452F0072377C /* JakBu */,
@@ -92,6 +160,28 @@
 			productReference = 6F150FBE2EE9452F0072377C /* JakBu.app */;
 			productType = "com.apple.product-type.application";
 		};
+		6F150FF92EE962260072377C /* JakBuWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6F1510112EE962270072377C /* Build configuration list for PBXNativeTarget "JakBuWidgetExtension" */;
+			buildPhases = (
+				6F150FF62EE962260072377C /* Sources */,
+				6F150FF72EE962260072377C /* Frameworks */,
+				6F150FF82EE962260072377C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6F1510002EE962260072377C /* JakBuWidget */,
+			);
+			name = JakBuWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = JakBuWidgetExtension;
+			productReference = 6F150FFA2EE962260072377C /* JakBuWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -103,6 +193,9 @@
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					6F150FBD2EE9452F0072377C = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					6F150FF92EE962260072377C = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
@@ -126,12 +219,20 @@
 			projectRoot = "";
 			targets = (
 				6F150FBD2EE9452F0072377C /* JakBu */,
+				6F150FF92EE962260072377C /* JakBuWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		6F150FBC2EE9452F0072377C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6F150FF82EE962260072377C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -148,7 +249,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6F150FF62EE962260072377C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6F15100F2EE962270072377C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6F150FF92EE962260072377C /* JakBuWidgetExtension */;
+			targetProxy = 6F15100E2EE962270072377C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		6F150FD22EE945310072377C /* Debug */ = {
@@ -334,6 +450,66 @@
 			};
 			name = Release;
 		};
+		6F1510122EE962270072377C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4WFV8NBUPB;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JakBuWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = JakBuWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jh.JakBu.JakBuWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6F1510132EE962270072377C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4WFV8NBUPB;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JakBuWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = JakBuWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jh.JakBu.JakBuWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -351,6 +527,15 @@
 			buildConfigurations = (
 				6F150FD22EE945310072377C /* Debug */,
 				6F150FD32EE945310072377C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6F1510112EE962270072377C /* Build configuration list for PBXNativeTarget "JakBuWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6F1510122EE962270072377C /* Debug */,
+				6F1510132EE962270072377C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

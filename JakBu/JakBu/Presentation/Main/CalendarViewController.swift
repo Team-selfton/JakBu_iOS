@@ -138,7 +138,7 @@ class CalendarViewController: UIViewController {
         }
 
         eventsLabel.snp.makeConstraints {
-            $0.top.equalTo(calendarCollectionView.snp.bottom).offset(20)
+            $0.top.equalTo(calendarCollectionView.snp.bottom).offset(8)
             $0.leading.equalToSuperview().offset(20)
             $0.trailing.equalToSuperview().offset(-20)
         }
