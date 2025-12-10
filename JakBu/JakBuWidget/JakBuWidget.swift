@@ -19,11 +19,6 @@ enum TodoStatus: String, Codable {
 }
 
 struct Provider: TimelineProvider {
-    // APIService를 사용하기 위한 준비
-    // 실제 앱에서는 App Group을 설정하여 공유 데이터를 사용해야 할 수 있습니다.
-    // 여기서는 APIService가 위젯 타겟에 포함되어 있고,
-    // 인증 토큰이 User Defaults 또는 키체인 공유를 통해 접근 가능하다고 가정합니다.
-
     func placeholder(in context: Context) -> TodoWidgetEntry {
         TodoWidgetEntry(date: Date(), todoItems: [
             Todo(id: 1, title: "운동하기", date: "2025-12-10", status: .TODO)
@@ -40,7 +35,6 @@ struct Provider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodoWidgetEntry>) -> ()) {
         fetchTodoEntry { entry in
-            // 1시간 후에 타임라인을 새로고침하도록 설정
             let nextUpdate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
             let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
             completion(timeline)
@@ -48,19 +42,13 @@ struct Provider: TimelineProvider {
     }
 
     private func fetchTodoEntry(completion: @escaping (TodoWidgetEntry) -> ()) {
-        // APIService를 사용하여 오늘의 할일 목록을 가져옵니다.
-        // 이 예제에서는 APIService가 Combine을 사용한다고 가정합니다.
-        // 실제 구현 시에는 위젯 환경에 맞게 비동기 처리가 필요할 수 있습니다.
-        
-        // APIService.shared.getTodayTodos()가 Combine Publisher를 반환한다고 가정
-        // 위젯은 UIKit을 사용하지 않으므로, API 호출 로직이 UIKit에 의존하지 않아야 합니다.
-        // 여기서는 가상의 데이터로 대체합니다. 실제 APIService 호출 코드로 변경해야 합니다.
-        
         // --- 가상 데이터 ---
         let sampleTodos = [
-            Todo(id: 1, title: "오늘의 할일 1", date: "2025-12-10", status: .TODO),
-            Todo(id: 2, title: "오늘의 할일 2", date: "2025-12-10", status: .TODO),
-            Todo(id: 3, title: "완료된 할일 1", date: "2025-12-10", status: .DONE)
+            Todo(id: 1, title: "동아리 활동", date: "2025-12-10", status: .TODO),
+            Todo(id: 2, title: "SwiftUI 공부", date: "2025-12-10", status: .TODO),
+            Todo(id: 3, title: "알고리즘 문제 풀기", date: "2025-12-10", status: .TODO),
+            Todo(id: 4, title: "TIL 작성하기", date: "2025-12-10", status: .DONE),
+            Todo(id: 5, title: "프로젝트 회의", date: "2025-12-10", status: .DONE)
         ]
         
         let todoItems = sampleTodos.filter { $0.status == .TODO }
@@ -68,26 +56,6 @@ struct Provider: TimelineProvider {
         
         let entry = TodoWidgetEntry(date: Date(), todoItems: todoItems, doneItems: doneItems)
         completion(entry)
-        
-        // --- 실제 APIService 호출 예시 (주석 처리) ---
-        /*
-        var cancellables = Set<AnyCancellable>()
-        APIService.shared.getTodayTodos()
-            .receive(on: DispatchQueue.main)
-            .sink { completionResult in
-                if case .failure(_) = completionResult {
-                    // 에러 발생 시 빈 목록으로 엔트리 생성
-                    let entry = TodoWidgetEntry(date: Date(), todoItems: [], doneItems: [])
-                    completion(entry)
-                }
-            } receiveValue: { todos in
-                let todoItems = todos.filter { $0.status == .TODO }
-                let doneItems = todos.filter { $0.status == .DONE }
-                let entry = TodoWidgetEntry(date: Date(), todoItems: todoItems, doneItems: doneItems)
-                completion(entry)
-            }
-            .store(in: &cancellables) // 실제 사용 시에는 이 cancellable을 관리해야 합니다.
-        */
     }
 }
 
@@ -97,44 +65,74 @@ struct TodoWidgetEntry: TimelineEntry {
     let doneItems: [Todo]
 }
 
+// MARK: - Views
+
 struct JakBuWidgetEntryView : View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var family
 
+    @ViewBuilder
+    var body: some View {
+        if entry.todoItems.isEmpty && entry.doneItems.isEmpty {
+            EmptyStateView()
+        } else {
+            switch family {
+            case .systemSmall:
+                SmallWidgetView(entry: entry)
+            case .systemMedium:
+                MediumWidgetView(entry: entry)
+            default:
+                MediumWidgetView(entry: entry)
+            }
+        }
+    }
+}
+
+struct SmallWidgetView: View {
+    var entry: TodoWidgetEntry
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            WidgetHeaderView()
+            
+            Spacer()
+
+            ProgressCircleView(
+                total: entry.todoItems.count + entry.doneItems.count,
+                completed: entry.doneItems.count
+            )
+            
+            Spacer()
+            
+            Text("남은 할일: \(entry.todoItems.count)개")
+                .font(.caption)
+                .bold()
+                .foregroundColor(.secondary)
+        }
+        .padding()
+    }
+}
+
+struct MediumWidgetView: View {
+    var entry: TodoWidgetEntry
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("오늘의 작부")
-                .font(.headline)
-                .foregroundColor(.blue)
-
-            if entry.todoItems.isEmpty && entry.doneItems.isEmpty {
-                Text("할일이 없습니다. 추가해보세요!")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    if !entry.todoItems.isEmpty {
-                        Text("☑️ 할일")
-                            .font(.subheadline).bold()
-                        ForEach(entry.todoItems.prefix(3)) { todo in
-                            Text(todo.title)
-                                .font(.footnote)
-                        }
+            WidgetHeaderView()
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading) {
+                    Text("할일")
+                        .font(.caption).bold().foregroundColor(.secondary)
+                    ForEach(entry.todoItems.prefix(3)) { todo in
+                        TodoRow(todo: todo)
                     }
                 }
                 
-                Divider().padding(.vertical, 4)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    if !entry.doneItems.isEmpty {
-                        Text("👍 한일")
-                            .font(.subheadline).bold()
-                        ForEach(entry.doneItems.prefix(3)) { todo in
-                            Text(todo.title)
-                                .font(.footnote)
-                                .strikethrough()
-                                .foregroundColor(.gray)
-                        }
+                VStack(alignment: .leading) {
+                    Text("한일")
+                        .font(.caption).bold().foregroundColor(.secondary)
+                    ForEach(entry.doneItems.prefix(2)) { todo in
+                        TodoRow(todo: todo)
                     }
                 }
             }
@@ -143,6 +141,93 @@ struct JakBuWidgetEntryView : View {
         .padding()
     }
 }
+
+
+struct WidgetHeaderView: View {
+    var body: some View {
+        HStack {
+            Text("작부")
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundColor(.blue)
+            Spacer()
+            Image(systemName: "paperplane.fill")
+                .foregroundColor(.blue)
+        }
+    }
+}
+
+struct TodoRow: View {
+    let todo: Todo
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: todo.status == .DONE ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(todo.status == .DONE ? .green : .blue)
+                .font(.subheadline)
+            
+            Text(todo.title)
+                .font(.subheadline)
+                .strikethrough(todo.status == .DONE, color: .secondary)
+                .foregroundColor(todo.status == .DONE ? .secondary : .primary)
+        }
+    }
+}
+
+struct ProgressCircleView: View {
+    let total: Int
+    let completed: Int
+    
+    private var progress: Double {
+        total > 0 ? Double(completed) / Double(total) : 0
+    }
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(lineWidth: 8)
+                .opacity(0.2)
+                .foregroundColor(.gray)
+
+            Circle()
+                .trim(from: 0.0, to: CGFloat(min(self.progress, 1.0)))
+                .stroke(style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+                .foregroundColor(.blue)
+                .rotationEffect(Angle(degrees: 270.0))
+                .animation(.linear, value: progress)
+            
+            VStack {
+                Text("\(completed)/\(total)")
+                    .font(.headline)
+                    .bold()
+                Text("완료")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+
+struct EmptyStateView: View {
+    var body: some View {
+        VStack(alignment: .center, spacing: 12) {
+            Image(systemName: "sparkles")
+                .font(.largeTitle)
+                .foregroundColor(.blue)
+            
+            Text("오늘의 모든 할일을 완료했어요!")
+                .font(.headline)
+                .fontWeight(.bold)
+            
+            Text("새로운 할일을 추가해보세요.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 
 struct JakBuWidget: Widget {
     let kind: String = "JakBuWidget"
@@ -167,5 +252,21 @@ struct JakBuWidget: Widget {
     ], doneItems: [
         Todo(id: 3, title: "코딩 공부", date: "2025-12-10", status: .DONE)
     ])
+}
+
+#Preview(as: .systemSmall) {
+    JakBuWidget()
+} timeline: {
+    TodoWidgetEntry(date: .now, todoItems: [
+        Todo(id: 1, title: "운동하기", date: "2025-12-10", status: .TODO),
+        Todo(id: 2, title: "책읽기", date: "2025-12-10", status: .TODO)
+    ], doneItems: [
+        Todo(id: 3, title: "코딩 공부", date: "2025-12-10", status: .DONE)
+    ])
+}
+
+#Preview(as: .systemSmall) {
+    JakBuWidget()
+} timeline: {
     TodoWidgetEntry(date: .now, todoItems: [], doneItems: [])
 }
