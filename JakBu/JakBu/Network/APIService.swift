@@ -37,7 +37,12 @@ class APIService {
             }
         }
 
+        NetworkLogger.shared.log(request: request)
+
         return URLSession.shared.dataTaskPublisher(for: request)
+            .handleEvents(receiveOutput: { output in
+                NetworkLogger.shared.log(response: output.response, data: output.data)
+            })
             .tryMap { data, response in
                 guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
                     throw APIError.invalidResponse
