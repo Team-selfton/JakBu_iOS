@@ -407,6 +407,16 @@ class CalendarCell: UICollectionViewCell {
 
 class EventCell: UITableViewCell {
 
+    private let checkIconView = UIView().then {
+        $0.layer.cornerRadius = 12
+        $0.clipsToBounds = true
+    }
+
+    private let checkIcon = UIImageView().then {
+        $0.contentMode = .scaleAspectFit
+        $0.tintColor = .white
+    }
+
     private let titleLabel = UILabel().then {
         $0.font = .systemFont(ofSize: 16, weight: .medium)
         $0.textColor = .jakbuTextPrimary
@@ -438,22 +448,36 @@ class EventCell: UITableViewCell {
     private func setupUI() {
         backgroundColor = .clear
         selectionStyle = .none
-        
+
         contentView.addSubview(containerView)
+        containerView.addSubview(checkIconView)
+        checkIconView.addSubview(checkIcon)
         containerView.addSubview(titleLabel)
         containerView.addSubview(statusLabel)
-        
+
         containerView.snp.makeConstraints {
             $0.edges.equalToSuperview().inset(UIEdgeInsets(top: 4, left: 20, bottom: 4, right: 20))
         }
-        
+
+        checkIconView.snp.makeConstraints {
+            $0.leading.equalToSuperview().offset(16)
+            $0.centerY.equalToSuperview()
+            $0.width.height.equalTo(32)
+        }
+
+        checkIcon.snp.makeConstraints {
+            $0.center.equalToSuperview()
+            $0.width.height.equalTo(18)
+        }
+
         titleLabel.snp.makeConstraints {
-            $0.top.leading.equalToSuperview().offset(16)
+            $0.top.equalToSuperview().offset(16)
+            $0.leading.equalTo(checkIconView.snp.trailing).offset(12)
             $0.trailing.lessThanOrEqualToSuperview().offset(-16)
         }
-        
+
         statusLabel.snp.makeConstraints {
-            $0.leading.equalToSuperview().offset(16)
+            $0.leading.equalTo(checkIconView.snp.trailing).offset(12)
             $0.bottom.equalToSuperview().offset(-16)
             $0.top.equalTo(titleLabel.snp.bottom).offset(4)
         }
@@ -464,14 +488,30 @@ class EventCell: UITableViewCell {
         statusLabel.text = todo.status == .DONE ? "완료" : "미완료"
 
         if todo.status == .DONE {
+            // 완료 상태 스타일링
             let attributeString = NSMutableAttributedString(string: todo.title)
             attributeString.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSMakeRange(0, attributeString.length))
             titleLabel.attributedText = attributeString
             titleLabel.textColor = .jakbuTextTertiary
+            statusLabel.textColor = .jakbuTextTertiary
+
+            // 완료 배경과 아이콘
+            containerView.backgroundColor = .jakbuCardBackgroundSecondary
+            containerView.alpha = 0.7
+            checkIconView.backgroundColor = .systemGreen
+            checkIcon.image = UIImage(systemName: "checkmark")
         } else {
+            // 미완료 상태 스타일링
             titleLabel.attributedText = nil
             titleLabel.text = todo.title
             titleLabel.textColor = .jakbuTextPrimary
+            statusLabel.textColor = .jakbuTextSecondary
+
+            // 미완료 배경과 아이콘
+            containerView.backgroundColor = .jakbuCardBackground
+            containerView.alpha = 1.0
+            checkIconView.backgroundColor = .jakbuSelectedStart
+            checkIcon.image = UIImage(systemName: "circle")
         }
     }
 }
