@@ -46,8 +46,12 @@ struct Provider: TimelineProvider {
         let sharedManager = WidgetSharedDataManager.shared
         let allTodos = sharedManager.loadTodos()
 
+        print("📊 [Widget] 전체 로드된 할일: \(allTodos.count)개")
+
         let todoItems = allTodos.filter { $0.status == .TODO }
         let doneItems = allTodos.filter { $0.status == .DONE }
+
+        print("📊 [Widget] TODO: \(todoItems.count)개, DONE: \(doneItems.count)개")
 
         let entry = TodoWidgetEntry(date: Date(), todoItems: todoItems, doneItems: doneItems)
         completion(entry)
