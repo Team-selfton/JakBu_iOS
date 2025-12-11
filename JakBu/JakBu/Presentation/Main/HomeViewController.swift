@@ -10,6 +10,7 @@ class HomeViewController: UIViewController {
     private var cancellables = Set<AnyCancellable>()
     private var todoItems: [Todo] = []
     private var doneItems: [Todo] = []
+    private var processingTodoIds = Set<Int>() // 중복 요청 방지
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -543,11 +544,50 @@ class HomeViewController: UIViewController {
         guard let view = sender.view else { return }
         let tappedId = view.tag
 
+        // 중복 요청 방지
+        guard !processingTodoIds.contains(tappedId) else { return }
+        processingTodoIds.insert(tappedId)
+
+        // Optimistic UI Update: 즉시 UI 업데이트
+        var movedTodo: Todo?
+        var previousTodoItems = todoItems
+        var previousDoneItems = doneItems
+
+        if let index = todoItems.firstIndex(where: { $0.id == tappedId }) {
+            movedTodo = todoItems[index]
+            todoItems.remove(at: index)
+            var updatedTodo = movedTodo!
+            updatedTodo.status = .DONE
+            doneItems.append(updatedTodo)
+        } else if let index = doneItems.firstIndex(where: { $0.id == tappedId }) {
+            movedTodo = doneItems[index]
+            doneItems.remove(at: index)
+            var updatedTodo = movedTodo!
+            updatedTodo.status = .TODO
+            todoItems.append(updatedTodo)
+        }
+
+        // 즉시 UI 업데이트
+        updateUI()
+
+        // 위젯 데이터 즉시 업데이트
+        let allTodos = todoItems + doneItems
+        SharedDataManager.shared.saveTodos(allTodos)
+
+        // API 요청
         APIService.shared.toggleTodoStatus(id: tappedId)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
                 guard let self = self else { return }
+                self.processingTodoIds.remove(tappedId)
+
                 if case .failure(let error) = completion {
+                    // 실패 시 롤백
+                    self.todoItems = previousTodoItems
+                    self.doneItems = previousDoneItems
+                    self.updateUI()
+                    SharedDataManager.shared.saveTodos(previousTodoItems + previousDoneItems)
+
                     if let apiError = error as? APIError, apiError == .sessionExpired {
                         self.handleSessionExpired()
                     } else {
@@ -556,21 +596,8 @@ class HomeViewController: UIViewController {
                 }
             } receiveValue: { [weak self] updatedTodo in
                 guard let self = self else { return }
-
-                // Update the data source
-                if let index = self.todoItems.firstIndex(where: { $0.id == tappedId }) {
-                    self.todoItems.remove(at: index)
-                    self.doneItems.append(updatedTodo)
-                } else if let index = self.doneItems.firstIndex(where: { $0.id == tappedId }) {
-                    self.doneItems.remove(at: index)
-                    self.todoItems.append(updatedTodo)
-                }
-                // Re-render UI after data source update
-                self.updateUI()
-
-                // 위젯 데이터 업데이트
-                let allTodos = self.todoItems + self.doneItems
-                SharedDataManager.shared.saveTodos(allTodos)
+                // 성공 시 서버 응답으로 데이터 동기화 (이미 UI는 업데이트됨)
+                // 필요시 추가 처리
             }
             .store(in: &cancellables)
     }
@@ -626,6 +653,9 @@ class HomeViewController: UIViewController {
     @objc private func deleteButtonTapped(_ sender: UIButton) {
         let todoId = sender.tag
 
+        // 중복 요청 방지
+        guard !processingTodoIds.contains(todoId) else { return }
+
         let alert = UIAlertController(title: "할일 삭제", message: "이 할일을 삭제하시겠습니까?", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "취소", style: .cancel, handler: nil))
         alert.addAction(UIAlertAction(title: "삭제", style: .destructive, handler: { _ in
@@ -635,11 +665,40 @@ class HomeViewController: UIViewController {
     }
 
     private func deleteTodo(id: Int) {
+        // 중복 요청 방지
+        guard !processingTodoIds.contains(id) else { return }
+        processingTodoIds.insert(id)
+
+        // Optimistic UI Update: 즉시 삭제
+        let previousTodoItems = todoItems
+        let previousDoneItems = doneItems
+
+        todoItems.removeAll { $0.id == id }
+        doneItems.removeAll { $0.id == id }
+
+        // 즉시 UI 업데이트
+        updateUI()
+
+        // 위젯 데이터 즉시 업데이트
+        let allTodos = todoItems + doneItems
+        SharedDataManager.shared.saveTodos(allTodos)
+        SharedDataManager.shared.reloadAllWidgets()
+
+        // API 요청
         APIService.shared.deleteTodo(id: id)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
                 guard let self = self else { return }
+                self.processingTodoIds.remove(id)
+
                 if case .failure(let error) = completion {
+                    // 실패 시 롤백
+                    self.todoItems = previousTodoItems
+                    self.doneItems = previousDoneItems
+                    self.updateUI()
+                    SharedDataManager.shared.saveTodos(previousTodoItems + previousDoneItems)
+                    SharedDataManager.shared.reloadAllWidgets()
+
                     if let apiError = error as? APIError, apiError == .sessionExpired {
                         self.handleSessionExpired()
                     } else {
@@ -648,18 +707,7 @@ class HomeViewController: UIViewController {
                 }
             } receiveValue: { [weak self] _ in
                 guard let self = self else { return }
-
-                // Remove from data source
-                self.todoItems.removeAll { $0.id == id }
-                self.doneItems.removeAll { $0.id == id }
-
-                // Re-render UI
-                self.updateUI()
-
-                // 위젯 데이터 업데이트
-                let allTodos = self.todoItems + self.doneItems
-                SharedDataManager.shared.saveTodos(allTodos)
-                SharedDataManager.shared.reloadAllWidgets()
+                // 성공 시 이미 UI는 업데이트됨
             }
             .store(in: &cancellables)
     }

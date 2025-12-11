@@ -4,7 +4,7 @@ struct Todo: Codable, Identifiable {
     let id: Int
     let title: String
     let date: String
-    let status: TodoStatus
+    var status: TodoStatus // Optimistic UI를 위해 var로 변경
 }
 
 enum TodoStatus: String, Codable {
