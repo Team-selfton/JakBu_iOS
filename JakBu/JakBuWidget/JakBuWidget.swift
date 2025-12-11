@@ -117,15 +117,15 @@ struct MediumWidgetView: View {
             HStack(alignment: .top, spacing: 12) {
                 // 할일 섹션
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "circle")
-                            .font(.caption2)
+                    HStack(spacing: 6) {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 12))
                             .foregroundColor(Color(red: 0x5b/255, green: 0x8d/255, blue: 0xd5/255))
                         Text("할일")
-                            .font(.caption)
-                            .bold()
-                            .foregroundColor(.white.opacity(0.8))
+                            .font(.system(size: 13, weight: .heavy))
+                            .foregroundColor(.white)
                     }
+                    .padding(.bottom, 2)
 
                     if entry.todoItems.isEmpty {
                         Text("없음")
@@ -148,15 +148,15 @@ struct MediumWidgetView: View {
 
                 // 완료 섹션
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
+                    HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.caption2)
+                            .font(.system(size: 12))
                             .foregroundColor(.green)
                         Text("완료")
-                            .font(.caption)
-                            .bold()
-                            .foregroundColor(.white.opacity(0.8))
+                            .font(.system(size: 13, weight: .heavy))
+                            .foregroundColor(.white)
                     }
+                    .padding(.bottom, 2)
 
                     if entry.doneItems.isEmpty {
                         Text("없음")
