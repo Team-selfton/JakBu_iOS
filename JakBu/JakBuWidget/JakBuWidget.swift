@@ -73,7 +73,11 @@ struct JakBuWidgetEntryView : View {
     @ViewBuilder
     var body: some View {
         if entry.todoItems.isEmpty && entry.doneItems.isEmpty {
-            EmptyStateView()
+            // 아무 할일도 없는 상태
+            NoTodosView()
+        } else if entry.todoItems.isEmpty && !entry.doneItems.isEmpty {
+            // 모든 할일을 완료한 상태
+            AllCompletedView()
         } else {
             switch family {
             case .systemSmall:
@@ -258,31 +262,40 @@ struct ProgressCircleView: View {
     }
 }
 
-struct EmptyStateView: View {
+struct NoTodosView: View {
     var body: some View {
-        VStack(spacing: 16) {
-            WidgetHeaderView()
-                .padding(.horizontal)
+        VStack(spacing: 8) {
+            Image(systemName: "plus.circle")
+                .font(.system(size: 40))
+                .foregroundColor(Color(red: 0x6b/255, green: 0x9b/255, blue: 0xd8/255))
 
-            Spacer()
+            Text("할일을 추가해보세요")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
 
-            VStack(spacing: 12) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(.green)
-
-                Text("모든 할일 완료!")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-
-                Text("새로운 할일을 추가해보세요")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.6))
-            }
-
-            Spacer()
+            Text("아직 아무것도 없어요")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.6))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+}
+
+struct AllCompletedView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 50))
+                .foregroundColor(.green)
+
+            Text("모든 할일 완료!")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
     }
 }
