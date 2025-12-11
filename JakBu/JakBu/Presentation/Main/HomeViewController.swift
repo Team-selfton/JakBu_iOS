@@ -260,15 +260,68 @@ class HomeViewController: UIViewController {
     // MARK: - Actions
     
     @objc private func logoutButtonTapped() {
-        let alert = UIAlertController(title: "로그아웃", message: "정말 로그아웃 하시겠습니까?", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel, handler: nil))
-        alert.addAction(UIAlertAction(title: "로그아웃", style: .destructive, handler: { _ in
+        let alert = UIAlertController(title: "계정 관리", message: "원하시는 작업을 선택해주세요", preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: "로그아웃", style: .default, handler: { _ in
             self.performLogout()
         }))
+        alert.addAction(UIAlertAction(title: "회원 탈퇴", style: .destructive, handler: { _ in
+            self.performDeleteAccount()
+        }))
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel, handler: nil))
         present(alert, animated: true)
     }
     
     private func performLogout() {
+        APIService.shared.logout()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                guard let self = self else { return }
+                // 성공이든 실패든 로컬 토큰은 삭제하고 로그인 화면으로 이동
+                if case .failure(let error) = completion {
+                    print("로그아웃 API 실패: \(error.localizedDescription)")
+                }
+                self.navigateToOnboarding()
+            } receiveValue: { _ in
+                // 204 No Content 응답
+            }
+            .store(in: &cancellables)
+    }
+
+    private func performDeleteAccount() {
+        let confirmAlert = UIAlertController(
+            title: "정말 탈퇴하시겠습니까?",
+            message: "계정과 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+            preferredStyle: .alert
+        )
+        confirmAlert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        confirmAlert.addAction(UIAlertAction(title: "탈퇴", style: .destructive) { [weak self] _ in
+            self?.executeDeleteAccount()
+        })
+        present(confirmAlert, animated: true)
+    }
+
+    private func executeDeleteAccount() {
+        APIService.shared.deleteAccount()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                guard let self = self else { return }
+                if case .failure(let error) = completion {
+                    if let apiError = error as? APIError, apiError == .sessionExpired {
+                        self.handleSessionExpired()
+                    } else {
+                        self.showAlert(message: "회원 탈퇴에 실패했습니다: \(error.localizedDescription)")
+                    }
+                } else {
+                    // 성공 시 로컬 토큰 삭제하고 온보딩으로 이동
+                    self.navigateToOnboarding()
+                }
+            } receiveValue: { _ in
+                // 204 No Content 응답
+            }
+            .store(in: &cancellables)
+    }
+
+    private func navigateToOnboarding() {
         // Clear tokens
         AuthManager.shared.clearTokens()
 
@@ -278,7 +331,7 @@ class HomeViewController: UIViewController {
         // Navigate to Onboarding
         guard let window = view.window else { return }
         let onboardingVC = OnboardingViewController()
-        
+
         UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: {
             window.rootViewController = onboardingVC
         })

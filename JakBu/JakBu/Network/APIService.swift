@@ -148,6 +148,82 @@ class APIService {
         return self.request(endpoint: "/auth/login", method: "POST", body: request)
     }
 
+    func logout() -> AnyPublisher<Void, APIError> {
+        let urlRequest = self.createRequest(endpoint: "/auth/logout", method: "POST", needsAuth: true)
+
+        return URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .handleEvents(receiveOutput: { output in
+                NetworkLogger.shared.log(response: output.response, data: output.data)
+            })
+            .tryMap { data, response in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+                if httpResponse.statusCode == 401 {
+                    throw APIError.unauthorized
+                }
+                if httpResponse.statusCode == 403 {
+                    throw APIError.sessionExpired
+                }
+                guard 200..<300 ~= httpResponse.statusCode else {
+                    throw APIError.invalidResponse
+                }
+                return ()
+            }
+            .mapError { error -> APIError in
+                if let apiError = error as? APIError {
+                    return apiError
+                }
+                return APIError.requestFailed(error)
+            }
+            .catch { error -> AnyPublisher<Void, APIError> in
+                if error == .unauthorized {
+                    return self.refreshTokenAndRetry(request: { self.logout() })
+                } else {
+                    return Fail(error: error).eraseToAnyPublisher()
+                }
+            }
+            .eraseToAnyPublisher()
+    }
+
+    func deleteAccount() -> AnyPublisher<Void, APIError> {
+        let urlRequest = self.createRequest(endpoint: "/auth/account", method: "DELETE", needsAuth: true)
+
+        return URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .handleEvents(receiveOutput: { output in
+                NetworkLogger.shared.log(response: output.response, data: output.data)
+            })
+            .tryMap { data, response in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+                if httpResponse.statusCode == 401 {
+                    throw APIError.unauthorized
+                }
+                if httpResponse.statusCode == 403 {
+                    throw APIError.sessionExpired
+                }
+                guard 200..<300 ~= httpResponse.statusCode else {
+                    throw APIError.invalidResponse
+                }
+                return ()
+            }
+            .mapError { error -> APIError in
+                if let apiError = error as? APIError {
+                    return apiError
+                }
+                return APIError.requestFailed(error)
+            }
+            .catch { error -> AnyPublisher<Void, APIError> in
+                if error == .unauthorized {
+                    return self.refreshTokenAndRetry(request: { self.deleteAccount() })
+                } else {
+                    return Fail(error: error).eraseToAnyPublisher()
+                }
+            }
+            .eraseToAnyPublisher()
+    }
+
     // MARK: - ToDo
     func createTodo(request: CreateTodoRequest) -> AnyPublisher<Todo, APIError> {
         return self.request(endpoint: "/todo", method: "POST", body: request, needsAuth: true)
