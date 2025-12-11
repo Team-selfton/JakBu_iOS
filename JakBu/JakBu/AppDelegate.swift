@@ -1,11 +1,5 @@
-//
-//  AppDelegate.swift
-//  JakBu
-//
-//  Created by 이지훈 on 12/10/25.
-//
-
 import UIKit
+import Firebase
 import UserNotifications
 
 @main
@@ -23,6 +17,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 print("알림 설정 완료")
             }
         }
+        FirebaseApp.configure()
 
         return true
     }

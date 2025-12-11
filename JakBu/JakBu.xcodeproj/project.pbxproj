@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6F0D0C542EEB082A001CD6A2 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6F0D0C532EEB082A001CD6A2 /* FirebaseAnalytics */; };
 		6F150FD82EE947C50072377C /* Then in Frameworks */ = {isa = PBXBuildFile; productRef = 6F150FD72EE947C50072377C /* Then */; };
 		6F150FDB2EE947D10072377C /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6F150FDA2EE947D10072377C /* SnapKit */; };
 		6F150FFD2EE962260072377C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6F150FFC2EE962260072377C /* WidgetKit.framework */; };
@@ -89,6 +90,7 @@
 			files = (
 				6F150FD82EE947C50072377C /* Then in Frameworks */,
 				6F150FDB2EE947D10072377C /* SnapKit in Frameworks */,
+				6F0D0C542EEB082A001CD6A2 /* FirebaseAnalytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,6 +159,7 @@
 			packageProductDependencies = (
 				6F150FD72EE947C50072377C /* Then */,
 				6F150FDA2EE947D10072377C /* SnapKit */,
+				6F0D0C532EEB082A001CD6A2 /* FirebaseAnalytics */,
 			);
 			productName = JakBu;
 			productReference = 6F150FBE2EE9452F0072377C /* JakBu.app */;
@@ -214,6 +217,7 @@
 			packageReferences = (
 				6F150FD62EE947C50072377C /* XCRemoteSwiftPackageReference "Then" */,
 				6F150FD92EE947D10072377C /* XCRemoteSwiftPackageReference "SnapKit" */,
+				6F0D0C522EEB082A001CD6A2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6F150FBF2EE9452F0072377C /* Products */;
@@ -555,6 +559,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		6F0D0C522EEB082A001CD6A2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.7.0;
+			};
+		};
 		6F150FD62EE947C50072377C /* XCRemoteSwiftPackageReference "Then" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/devxoul/Then";
@@ -574,6 +586,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		6F0D0C532EEB082A001CD6A2 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6F0D0C522EEB082A001CD6A2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
 		6F150FD72EE947C50072377C /* Then */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6F150FD62EE947C50072377C /* XCRemoteSwiftPackageReference "Then" */;
