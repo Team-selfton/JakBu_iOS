@@ -11,6 +11,7 @@ class HomeViewController: UIViewController {
     private var todoItems: [Todo] = []
     private var doneItems: [Todo] = []
     private var processingTodoIds = Set<Int>() // 중복 요청 방지
+    private var isAddingTodo = false // 할일 추가 중복 요청 방지
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -131,6 +132,10 @@ class HomeViewController: UIViewController {
         addButton.isEnabled = false
         addButton.alpha = 0.5
 
+        // 1. 캐시된 데이터 먼저 로드 (즉시 표시)
+        loadCachedTodos()
+
+        // 2. 백그라운드에서 최신 데이터 가져오기
         fetchTodayTodos()
     }
 
@@ -339,6 +344,17 @@ class HomeViewController: UIViewController {
         window.makeKeyAndVisible()
     }
 
+    private func loadCachedTodos() {
+        let cachedTodos = SharedDataManager.shared.loadTodos()
+
+        if !cachedTodos.isEmpty {
+            self.todoItems = cachedTodos.filter { $0.status == .TODO }
+            self.doneItems = cachedTodos.filter { $0.status == .DONE }
+            self.updateUI()
+            print("✅ 캐시된 데이터 로드 완료: \(cachedTodos.count)개")
+        }
+    }
+
     private func fetchTodayTodos() {
         APIService.shared.getTodayTodos()
             .receive(on: DispatchQueue.main)
@@ -347,7 +363,13 @@ class HomeViewController: UIViewController {
                     if let apiError = error as? APIError, apiError == .sessionExpired {
                         self.handleSessionExpired()
                     } else {
-                        self.showAlert(message: "할일 목록을 불러오는데 실패했습니다: \(error.localizedDescription)")
+                        // 캐시된 데이터가 있으면 에러 메시지를 덜 방해적으로 표시
+                        let hasCachedData = !SharedDataManager.shared.loadTodos().isEmpty
+                        if !hasCachedData {
+                            self.showAlert(message: "할일 목록을 불러오는데 실패했습니다: \(error.localizedDescription)")
+                        } else {
+                            print("⚠️ 최신 데이터 로드 실패 (캐시된 데이터 사용 중): \(error.localizedDescription)")
+                        }
                     }
                 }
             } receiveValue: { todos in
@@ -357,6 +379,7 @@ class HomeViewController: UIViewController {
 
                 // 위젯 데이터 업데이트
                 SharedDataManager.shared.saveTodos(todos)
+                print("✅ 최신 데이터 로드 완료: \(todos.count)개")
             }
             .store(in: &cancellables)
     }
@@ -367,13 +390,29 @@ class HomeViewController: UIViewController {
         guard let text = todoTextField.text, !text.isEmpty else {
             return
         }
-        
+
+        // 중복 요청 방지
+        guard !isAddingTodo else { return }
+        isAddingTodo = true
+
+        // UI 비활성화
+        addButton.isEnabled = false
+        addButton.alpha = 0.5
+        todoTextField.isEnabled = false
+
         let today = dateFormatter.string(from: Date())
         let request = CreateTodoRequest(title: text, date: today)
 
         APIService.shared.createTodo(request: request)
             .receive(on: DispatchQueue.main)
-            .sink { completion in
+            .sink { [weak self] completion in
+                guard let self = self else { return }
+
+                // UI 다시 활성화
+                self.isAddingTodo = false
+                self.todoTextField.isEnabled = true
+                self.textFieldDidChange()
+
                 if case .failure(let error) = completion {
                     if let apiError = error as? APIError, apiError == .sessionExpired {
                         self.handleSessionExpired()
@@ -381,7 +420,8 @@ class HomeViewController: UIViewController {
                         self.showAlert(message: "할일 추가에 실패했습니다: \(error.localizedDescription)")
                     }
                 }
-            } receiveValue: { _ in
+            } receiveValue: { [weak self] _ in
+                guard let self = self else { return }
                 self.todoTextField.text = ""
                 self.todoTextField.resignFirstResponder()
                 self.fetchTodayTodos()
